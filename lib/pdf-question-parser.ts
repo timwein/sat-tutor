@@ -170,13 +170,11 @@ export async function parseQuestionsPdf(pdfText: string): Promise<ParsedQuestion
   const chunks = splitTextByModule(pdfText);
 
   if (chunks.length > 1) {
-    // Parse each module chunk separately to avoid token limit issues
-    const allQuestions: ParsedQuestion[] = [];
-    for (const chunk of chunks) {
-      const parsed = await parseSingleQuestionsChunk(chunk.text);
-      allQuestions.push(...parsed);
-    }
-    return allQuestions;
+    // Parse all module chunks in parallel to stay within timeout limits
+    const results = await Promise.all(
+      chunks.map((chunk) => parseSingleQuestionsChunk(chunk.text))
+    );
+    return results.flat();
   }
 
   return parseSingleQuestionsChunk(pdfText);
@@ -228,12 +226,10 @@ export async function parseExplanationsPdf(pdfText: string): Promise<ParsedExpla
   const chunks = splitTextByModule(pdfText);
 
   if (chunks.length > 1) {
-    const allExplanations: ParsedExplanation[] = [];
-    for (const chunk of chunks) {
-      const parsed = await parseSingleExplanationsChunk(chunk.text);
-      allExplanations.push(...parsed);
-    }
-    return allExplanations;
+    const results = await Promise.all(
+      chunks.map((chunk) => parseSingleExplanationsChunk(chunk.text))
+    );
+    return results.flat();
   }
 
   return parseSingleExplanationsChunk(pdfText);
