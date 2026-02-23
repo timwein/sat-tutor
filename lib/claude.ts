@@ -7,7 +7,7 @@ const anthropic = new Anthropic({
 });
 
 export const MODELS = {
-  SONNET: 'claude-sonnet-4-5-20241022',
+  SONNET: 'claude-sonnet-4-5-20250514',
   OPUS: 'claude-opus-4-0-20250514',
 } as const;
 
