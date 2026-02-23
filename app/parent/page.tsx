@@ -18,8 +18,8 @@ export default async function ParentPage() {
     .maybeSingle();
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <h1 className="text-3xl font-bold">Parent Dashboard</h1>
+    <div className="mx-auto max-w-6xl space-y-4 md:space-y-6">
+      <h1 className="text-2xl font-bold md:text-3xl">Parent Dashboard</h1>
       <p className="text-gray-500">
         Monitor your student&apos;s progress and study habits.
       </p>

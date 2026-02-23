@@ -82,8 +82,8 @@ export default async function ReviewPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <h1 className="text-3xl font-bold">Review Queue</h1>
+    <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
+      <h1 className="text-2xl font-bold md:text-3xl">Review Queue</h1>
       <p className="text-gray-500">
         Questions you got wrong are scheduled for spaced repetition review.
         Reviewing at the right intervals helps move knowledge into long-term

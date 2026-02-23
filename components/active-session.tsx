@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertTriangle } from 'lucide-react';
 import { SessionTimer } from '@/components/session-timer';
@@ -10,6 +10,12 @@ import { ConfidenceSelector } from '@/components/confidence-selector';
 import { ExplanationPanel } from '@/components/explanation-panel';
 import { SessionSummaryCard } from '@/components/session-summary-card';
 import { Button } from '@/components/ui/button';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import {
   Dialog,
   DialogContent,
@@ -38,6 +44,22 @@ interface ActiveSessionProps {
   maxQuestions: number;
 }
 
+// useIsMobile hook — defaults to false for SSR
+function subscribeToMedia(cb: () => void) {
+  const mql = window.matchMedia('(max-width: 767px)');
+  mql.addEventListener('change', cb);
+  return () => mql.removeEventListener('change', cb);
+}
+function getIsMobileSnapshot() {
+  return window.matchMedia('(max-width: 767px)').matches;
+}
+function getIsMobileServerSnapshot() {
+  return false;
+}
+function useIsMobile() {
+  return useSyncExternalStore(subscribeToMedia, getIsMobileSnapshot, getIsMobileServerSnapshot);
+}
+
 export function ActiveSession({
   sessionId,
   studentId,
@@ -47,6 +69,7 @@ export function ActiveSession({
   maxQuestions,
 }: ActiveSessionProps) {
   const router = useRouter();
+  const isMobile = useIsMobile();
 
   // Core state machine
   const [state, setState] = useState<SessionState>('loading');
@@ -77,6 +100,9 @@ export function ActiveSession({
   // Dialogs
   const [showEndConfirm, setShowEndConfirm] = useState(false);
   const [showFrustrationDialog, setShowFrustrationDialog] = useState(false);
+
+  // Mobile sheet
+  const [showExplanationSheet, setShowExplanationSheet] = useState(false);
 
   // End session
   const endSession = useCallback(async () => {
@@ -109,6 +135,7 @@ export function ActiveSession({
   const fetchNextQuestion = useCallback(async () => {
     setState('loading');
     setError(null);
+    setShowExplanationSheet(false);
 
     try {
       const res = await fetch('/api/questions/next', {
@@ -201,6 +228,11 @@ export function ActiveSession({
       }
 
       setState('explaining');
+
+      // On mobile, show explanation in bottom sheet
+      if (isMobile) {
+        setShowExplanationSheet(true);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit answer');
       setState('answering');
@@ -287,7 +319,7 @@ export function ActiveSession({
   // Session ended — show summary
   if (state === 'ended' && endedSession) {
     return (
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <SessionSummaryCard
           session={endedSession}
           summary={summary}
@@ -296,6 +328,20 @@ export function ActiveSession({
       </div>
     );
   }
+
+  // Explanation content (shared between inline and sheet)
+  const explanationContent = state === 'explaining' && attemptResult && (
+    <>
+      <ExplanationPanel
+        question={attemptResult.question}
+        studentAnswer={selectedAnswer ?? ''}
+        isCorrect={attemptResult.is_correct}
+      />
+      <Button onClick={fetchNextQuestion} className="w-full">
+        Next Question
+      </Button>
+    </>
+  );
 
   // Active session (answering, submitting, explaining)
   return (
@@ -310,8 +356,8 @@ export function ActiveSession({
         onEndSession={handleEndSession}
       />
 
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="mx-auto max-w-3xl space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6">
+        <div className="mx-auto max-w-3xl space-y-4 md:space-y-6">
           {error && (
             <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
               {error}
@@ -391,22 +437,33 @@ export function ActiveSession({
                 </div>
               )}
 
-              {state === 'explaining' && attemptResult && (
-                <>
-                  <ExplanationPanel
-                    question={attemptResult.question}
-                    studentAnswer={selectedAnswer ?? ''}
-                    isCorrect={attemptResult.is_correct}
-                  />
-                  <Button onClick={fetchNextQuestion} className="w-full">
-                    Next Question
-                  </Button>
-                </>
+              {/* Desktop: inline explanation */}
+              {!isMobile && explanationContent}
+
+              {/* Mobile: "Next Question" button when explanation sheet is showing */}
+              {isMobile && state === 'explaining' && (
+                <Button onClick={() => setShowExplanationSheet(true)} variant="outline" className="w-full">
+                  View Explanation
+                </Button>
               )}
             </>
           )}
         </div>
       </div>
+
+      {/* Mobile bottom sheet for explanation */}
+      {isMobile && (
+        <Sheet open={showExplanationSheet} onOpenChange={setShowExplanationSheet}>
+          <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle>Explanation</SheetTitle>
+            </SheetHeader>
+            <div className="space-y-4 px-4 pb-4">
+              {explanationContent}
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
 
       {/* End session confirmation dialog */}
       <Dialog open={showEndConfirm} onOpenChange={setShowEndConfirm}>

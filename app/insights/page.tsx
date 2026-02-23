@@ -37,8 +37,8 @@ export default async function InsightsPage() {
   const count = wrongAnswerCount ?? 0;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <h1 className="text-3xl font-bold">Wrong Answer Intelligence</h1>
+    <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
+      <h1 className="text-2xl font-bold md:text-3xl">Wrong Answer Intelligence</h1>
       <p className="text-gray-500">
         The AI analyzes your wrong answers across 8 dimensions to find hidden
         patterns.

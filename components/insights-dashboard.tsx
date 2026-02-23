@@ -84,9 +84,9 @@ export function InsightsDashboard({
   return (
     <div className="space-y-6">
       {/* Header with metadata and refresh */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Clock className="h-4 w-4" />
+          <Clock className="h-4 w-4 shrink-0" />
           <span>
             Generated {formatRelativeTime(currentInsight.generated_at)} from{' '}
             {currentInsight.total_wrong_answers_analyzed} wrong answers
@@ -136,7 +136,7 @@ export function InsightsDashboard({
         </div>
 
         <Tabs defaultValue={selectedDimension}>
-          <TabsList className="flex flex-wrap">
+          <TabsList className="flex h-auto flex-wrap">
             {dimensionKeys.map((key) => (
               <TabsTrigger key={key} value={key} className="text-xs">
                 {DIMENSION_MAP[key]}

@@ -81,10 +81,10 @@ export default async function DashboardPage() {
       : null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8">
+    <div className="mx-auto max-w-6xl space-y-6 md:space-y-8">
       {/* Welcome header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back, Oren</h1>
+        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Welcome back, Oren</h1>
         <p className="mt-1 text-gray-500">
           Keep up the momentum. Your next study session is waiting.
         </p>
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
           {prediction ? (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-bold text-blue-900">
+                <span className="text-4xl font-bold text-blue-900 md:text-5xl">
                   {prediction.total_score_mid}
                 </span>
                 <span className="text-lg text-blue-600">/ 1600</span>
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
           ) : (
             <>
               <div className="flex items-baseline gap-2">
-                <span className="text-5xl font-bold text-blue-900">--</span>
+                <span className="text-4xl font-bold text-blue-900 md:text-5xl">--</span>
                 <span className="text-lg text-blue-600">/ 1600</span>
               </div>
               <p className="mt-2 text-sm text-blue-700">

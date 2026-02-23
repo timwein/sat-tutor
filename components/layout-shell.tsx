@@ -1,7 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { GraduationCap } from 'lucide-react';
 import { Sidebar } from '@/components/sidebar';
+import { BottomNav } from '@/components/bottom-nav';
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -14,11 +17,27 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto bg-gray-50 p-8">
+    <div className="flex h-screen flex-col md:flex-row">
+      {/* Mobile header */}
+      <header className="flex items-center gap-2 border-b bg-white px-4 py-3 md:hidden">
+        <Link href="/" className="flex items-center gap-2">
+          <GraduationCap className="h-7 w-7 text-blue-600" />
+          <span className="text-lg font-bold text-gray-900">SAT Tutor Pro</span>
+        </Link>
+      </header>
+
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex">
+        <Sidebar />
+      </div>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto bg-gray-50 p-4 pb-20 md:p-8 md:pb-8">
         {children}
       </main>
+
+      {/* Mobile bottom nav */}
+      <BottomNav />
     </div>
   );
 }

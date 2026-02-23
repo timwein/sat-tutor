@@ -189,6 +189,7 @@ export function ExplanationPanel({
             size="sm"
             onClick={() => handleModeSwitch('socratic')}
             disabled={isStreaming}
+            className="h-10 md:h-8"
           >
             Guide me
           </Button>
@@ -198,6 +199,7 @@ export function ExplanationPanel({
             size="sm"
             onClick={() => handleModeSwitch('direct')}
             disabled={isStreaming}
+            className="h-10 md:h-8"
           >
             Just tell me
           </Button>
@@ -236,16 +238,17 @@ export function ExplanationPanel({
                   if (e.key === 'Enter') handleSendSocratic();
                 }}
                 placeholder="Type your response..."
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="flex-1 rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:py-2 md:text-sm"
               />
               <Button
                 type="button"
                 size="sm"
                 onClick={handleSendSocratic}
                 disabled={!socraticInput.trim()}
+                className="h-10 gap-1 md:h-8"
               >
                 <Send className="h-4 w-4" />
-                Send
+                <span className="hidden md:inline">Send</span>
               </Button>
             </div>
           </div>

@@ -42,7 +42,7 @@ export function AnswerChoices({
               disabled={disabled}
               onClick={() => onSelect(letter)}
               className={cn(
-                'flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors',
+                'flex w-full items-center gap-3 rounded-lg border px-3 py-3.5 text-left transition-colors md:px-4 md:py-3',
                 'bg-white hover:bg-gray-50',
                 isSelected && !showResult && 'border-blue-500 bg-blue-50',
                 isCorrect && 'border-green-500 bg-green-50',
@@ -80,8 +80,10 @@ export function AnswerChoices({
                 onToggleCrossOut(letter);
               }}
               className={cn(
-                'flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-400 transition-opacity hover:bg-gray-100 hover:text-gray-600',
-                isCrossedOut ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-400 transition-opacity hover:bg-gray-100 hover:text-gray-600 md:h-6 md:w-6',
+                isCrossedOut
+                  ? 'opacity-100'
+                  : 'opacity-100 md:opacity-0 md:group-hover:opacity-100',
                 disabled && 'pointer-events-none'
               )}
               title={isCrossedOut ? 'Undo cross out' : 'Cross out'}

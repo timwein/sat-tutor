@@ -2,7 +2,6 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
 
 interface QuestionCardProps {
   questionText: string;
@@ -28,7 +27,7 @@ export function QuestionCard({
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>
             Question {questionNumber}
             {totalQuestions != null && (
@@ -59,11 +58,11 @@ export function QuestionCard({
       </CardHeader>
       <CardContent>
         {passageText && (
-          <div className="mb-4 max-h-60 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 p-4 text-sm italic text-gray-700">
+          <div className="mb-4 max-h-40 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 p-3 text-sm italic text-gray-700 md:max-h-60 md:p-4">
             {passageText}
           </div>
         )}
-        <p className="text-lg font-medium">{questionText}</p>
+        <p className="text-base font-medium md:text-lg">{questionText}</p>
       </CardContent>
     </Card>
   );

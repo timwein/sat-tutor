@@ -48,8 +48,8 @@ export default async function ProgressPage() {
   const overallAccuracy = totalAttempted > 0 ? Math.round((totalCorrect / totalAttempted) * 100) : null;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <h1 className="text-3xl font-bold">My Progress</h1>
+    <div className="mx-auto max-w-6xl space-y-4 md:space-y-6">
+      <h1 className="text-2xl font-bold md:text-3xl">My Progress</h1>
       <p className="text-gray-500">Track your skill development across all SAT sub-skills.</p>
 
       {/* Stats cards row */}

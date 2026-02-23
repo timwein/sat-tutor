@@ -142,7 +142,7 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
               {recentSessions.map((session) => (
                 <div
                   key={session.id}
-                  className="flex items-center justify-between rounded-lg border px-4 py-3"
+                  className="flex flex-col gap-2 rounded-lg border px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
                     <Badge variant="secondary">

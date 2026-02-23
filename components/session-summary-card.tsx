@@ -68,24 +68,24 @@ export function SessionSummaryCard({
 
       <CardContent className="space-y-6">
         {/* Stats row */}
-        <div className="grid grid-cols-3 gap-4">
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
-            <Clock className="mb-1 h-5 w-5 text-gray-500" />
-            <span className="text-lg font-semibold">
+        <div className="grid grid-cols-3 gap-2 md:gap-4">
+          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-3 md:p-4">
+            <Clock className="mb-1 h-4 w-4 text-gray-500 md:h-5 md:w-5" />
+            <span className="text-sm font-semibold md:text-lg">
               {formatDuration(session.started_at, session.ended_at)}
             </span>
             <span className="text-xs text-gray-500">Duration</span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
-            <Target className="mb-1 h-5 w-5 text-gray-500" />
-            <span className="text-lg font-semibold">
+          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-3 md:p-4">
+            <Target className="mb-1 h-4 w-4 text-gray-500 md:h-5 md:w-5" />
+            <span className="text-sm font-semibold md:text-lg">
               {session.questions_correct} / {session.questions_answered}
             </span>
             <span className="text-xs text-gray-500">Questions</span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-4">
-            <CheckCircle className="mb-1 h-5 w-5 text-gray-500" />
-            <span className="text-lg font-semibold">{accuracy}%</span>
+          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-3 md:p-4">
+            <CheckCircle className="mb-1 h-4 w-4 text-gray-500 md:h-5 md:w-5" />
+            <span className="text-sm font-semibold md:text-lg">{accuracy}%</span>
             <span className="text-xs text-gray-500">Accuracy</span>
           </div>
         </div>

@@ -44,7 +44,7 @@ export function ConfidenceSelector({
         </span>{' '}
         <span className="text-xs text-gray-400">(optional)</span>
       </div>
-      <div className="flex gap-2">
+      <div className="grid grid-cols-3 gap-2">
         {levels.map((level) => {
           const isSelected = selected === level.value;
           const Icon = level.icon;
@@ -57,7 +57,7 @@ export function ConfidenceSelector({
               disabled={disabled}
               onClick={() => onSelect(level.value)}
               className={cn(
-                'gap-2',
+                'h-11 gap-1.5 text-xs md:h-9 md:gap-2 md:text-sm',
                 isSelected && level.selectedClasses
               )}
             >
