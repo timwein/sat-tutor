@@ -111,8 +111,17 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Upload failed');
+        let message = 'Upload failed';
+        try {
+          const data = await res.json();
+          message = data.error || message;
+        } catch {
+          const text = await res.text();
+          if (res.status === 413) message = 'PDF files are too large. Try smaller files.';
+          else if (res.status === 504) message = 'Processing timed out. Try fewer files.';
+          else message = text || `Server error (${res.status})`;
+        }
+        throw new Error(message);
       }
 
       const data = await res.json();

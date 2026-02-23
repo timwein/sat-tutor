@@ -3,6 +3,8 @@ import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/parent-auth';
 import { processUploadedPdfs } from '@/lib/pdf-question-parser';
 
+export const maxDuration = 120;
+
 export async function POST(request: NextRequest) {
   try {
     // Verify auth cookie

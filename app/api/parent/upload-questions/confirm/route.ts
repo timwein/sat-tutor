@@ -5,6 +5,8 @@ import { createServerClient } from '@/lib/supabase';
 import { generateQuestionId } from '@/lib/pdf-question-parser';
 import type { ClassifiedQuestion } from '@/lib/pdf-question-parser';
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     // Verify auth cookie
