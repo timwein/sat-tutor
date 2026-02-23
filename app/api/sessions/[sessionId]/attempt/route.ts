@@ -16,6 +16,16 @@ import type {
 } from '@/lib/types';
 import { SKILL_TAXONOMY } from '@/lib/types';
 
+const VALID_ERROR_TYPES = new Set([
+  'conceptual_gap', 'procedural_error', 'careless_rush',
+  'misread_comprehension', 'trap_answer', 'time_pressure', 'knowledge_gap',
+]);
+
+function sanitizeErrorType(errorType: string | undefined | null): string | null {
+  if (!errorType) return null;
+  return VALID_ERROR_TYPES.has(errorType) ? errorType : null;
+}
+
 function lookupSubSkillName(subSkillId: string): string {
   const allSkills = [
     ...SKILL_TAXONOMY.reading_writing,
@@ -197,7 +207,7 @@ export async function POST(
         is_correct: isCorrect,
         time_spent_seconds: time_spent_seconds ?? null,
         confidence_level: confidence_level ?? null,
-        error_type: errorClassification?.error_type ?? null,
+        error_type: sanitizeErrorType(errorClassification?.error_type),
         distractor_type: errorClassification?.distractor_type ?? null,
         error_explanation: errorClassification?.explanation ?? null,
         attempted_at: new Date().toISOString(),

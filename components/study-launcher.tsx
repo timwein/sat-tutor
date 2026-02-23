@@ -31,9 +31,11 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
   const router = useRouter();
   const [selectedSkill, setSelectedSkill] = useState(lowestRatedSkill);
   const [isStarting, setIsStarting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function startSession(type: 'quick_drill' | 'study_session') {
     setIsStarting(true);
+    setError(null);
     try {
       const body: Record<string, string> = {
         student_id: studentId,
@@ -53,14 +55,20 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
 
       const { session } = await res.json();
       router.push(`/study/${session.id}`);
-    } catch (error) {
-      console.error('Failed to start session:', error);
+    } catch (err) {
+      console.error('Failed to start session:', err);
+      setError('Failed to start session. Please try again.');
       setIsStarting(false);
     }
   }
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
