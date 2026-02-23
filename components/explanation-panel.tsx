@@ -32,6 +32,40 @@ const RW_STRATEGIES: ExplanationStrategy[] = [
   'pattern_recognition',
 ];
 
+interface HelpButton {
+  label: string;
+  prompt: string;
+  sections: Array<'math' | 'reading_writing'>;
+}
+
+const HELP_BUTTONS: HelpButton[] = [
+  {
+    label: 'Strategy for this question',
+    prompt: "What's the best strategy for this type of question? Walk me through a step-by-step method.",
+    sections: ['math', 'reading_writing'],
+  },
+  {
+    label: 'Break down the passage',
+    prompt: "Break down the passage for me. What are the key points, structure, and author's main argument?",
+    sections: ['reading_writing'],
+  },
+  {
+    label: 'Keywords to look for',
+    prompt: "What key words or phrases in the question and answer choices should I focus on? What clues do they give?",
+    sections: ['reading_writing'],
+  },
+  {
+    label: "I'm stuck",
+    prompt: "I'm completely stuck. Give me a strong hint without telling me the answer directly.",
+    sections: ['math', 'reading_writing'],
+  },
+  {
+    label: 'Help me eliminate',
+    prompt: "Help me eliminate wrong answers. Walk through each choice and explain why it's likely right or wrong.",
+    sections: ['math', 'reading_writing'],
+  },
+];
+
 export function ExplanationPanel({
   question,
   studentAnswer,
@@ -44,11 +78,15 @@ export function ExplanationPanel({
   const [conversationHistory, setConversationHistory] = useState<
     Array<{ role: 'user' | 'assistant'; content: string }>
   >([]);
-  const [socraticInput, setSocraticInput] = useState('');
+  const [userInput, setUserInput] = useState('');
   const [exchangeCount, setExchangeCount] = useState(0);
 
   const strategies =
     question.section === 'math' ? MATH_STRATEGIES : RW_STRATEGIES;
+
+  const helpButtons = HELP_BUTTONS.filter((b) =>
+    b.sections.includes(question.section)
+  );
 
   const fetchExplanation = useCallback(
     async (
@@ -99,8 +137,7 @@ export function ExplanationPanel({
           }
         }
 
-        // Add the assistant response to conversation history for Socratic mode
-        if (mode === 'socratic' && accumulated) {
+        if (accumulated) {
           setConversationHistory((prev) => [
             ...prev,
             { role: 'assistant', content: accumulated },
@@ -126,22 +163,25 @@ export function ExplanationPanel({
     setCurrentMode(mode);
     setConversationHistory([]);
     setExchangeCount(0);
-    setSocraticInput('');
+    setUserInput('');
     fetchExplanation(mode, currentStrategy, []);
   }
 
-  function handleSendSocratic() {
-    if (!socraticInput.trim() || isStreaming) return;
+  function handleSendMessage(message: string) {
+    if (!message.trim() || isStreaming) return;
 
-    const userMessage = socraticInput.trim();
     const updatedHistory = [
       ...conversationHistory,
-      { role: 'user' as const, content: userMessage },
+      { role: 'user' as const, content: message.trim() },
     ];
     setConversationHistory(updatedHistory);
-    setSocraticInput('');
+    setUserInput('');
     setExchangeCount((prev) => prev + 1);
     fetchExplanation('socratic', currentStrategy, updatedHistory);
+  }
+
+  function handleHelpButton(prompt: string) {
+    handleSendMessage(prompt);
   }
 
   function handleCycleStrategy() {
@@ -205,6 +245,21 @@ export function ExplanationPanel({
           </Button>
         </div>
 
+        {/* Help buttons */}
+        <div className="flex flex-wrap gap-2">
+          {helpButtons.map((btn) => (
+            <button
+              key={btn.label}
+              type="button"
+              onClick={() => handleHelpButton(btn.prompt)}
+              disabled={isStreaming}
+              className="rounded-full border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+
         {/* Explanation text area */}
         <div className="whitespace-pre-wrap text-gray-700">
           {explanation}
@@ -213,44 +268,29 @@ export function ExplanationPanel({
           )}
         </div>
 
-        {/* Socratic mode: follow-up input */}
-        {currentMode === 'socratic' && !isStreaming && explanation && (
-          <div className="space-y-3">
-            {exchangeCount >= 3 && (
-              <p className="text-sm text-amber-600">
-                Having trouble? Try{' '}
-                <button
-                  type="button"
-                  className="underline font-medium"
-                  onClick={() => handleModeSwitch('direct')}
-                >
-                  switching to direct mode
-                </button>{' '}
-                for a full explanation.
-              </p>
-            )}
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={socraticInput}
-                onChange={(e) => setSocraticInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleSendSocratic();
-                }}
-                placeholder="Type your response..."
-                className="flex-1 rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:py-2 md:text-sm"
-              />
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleSendSocratic}
-                disabled={!socraticInput.trim()}
-                className="h-10 gap-1 md:h-8"
-              >
-                <Send className="h-4 w-4" />
-                <span className="hidden md:inline">Send</span>
-              </Button>
-            </div>
+        {/* Always-visible free-text input */}
+        {!isStreaming && explanation && (
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSendMessage(userInput);
+              }}
+              placeholder="Ask anything about this question..."
+              className="flex-1 rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:py-2 md:text-sm"
+            />
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => handleSendMessage(userInput)}
+              disabled={!userInput.trim()}
+              className="h-10 gap-1 md:h-8"
+            >
+              <Send className="h-4 w-4" />
+              <span className="hidden md:inline">Send</span>
+            </Button>
           </div>
         )}
 
