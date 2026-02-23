@@ -126,13 +126,14 @@ function extractJsonFromResponse(text: string): string {
 }
 
 async function callClaude(systemPrompt: string, maxTokens: number): Promise<string> {
-  const response = await anthropic.messages.create({
+  const stream = anthropic.messages.stream({
     model: MODELS.SONNET,
     max_tokens: maxTokens,
     system: systemPrompt,
     messages: [{ role: 'user', content: 'Extract the structured data now. Return ONLY the JSON array.' }],
   });
 
+  const response = await stream.finalMessage();
   return response.content[0].type === 'text' ? response.content[0].text : '';
 }
 
