@@ -15,6 +15,7 @@ import { ParentPinDialog } from './parent-pin-dialog';
 import { ParentOverview } from './parent-overview';
 import { ParentDetailedView } from './parent-detailed-view';
 import { ParentAlerts } from './parent-alerts';
+import { QuestionUploader } from './question-uploader';
 import type { ParentDashboardData } from '@/lib/parent-dashboard';
 
 interface ParentDashboardShellProps {
@@ -203,7 +204,7 @@ export function ParentDashboardShell({
 
   return (
     <Tabs defaultValue="overview">
-      <TabsList>
+      <TabsList className="flex h-auto flex-wrap">
         <TabsTrigger value="overview">Overview</TabsTrigger>
         <TabsTrigger value="detailed">Detailed Analytics</TabsTrigger>
         <TabsTrigger value="alerts" className="gap-2">
@@ -217,6 +218,7 @@ export function ParentDashboardShell({
             </Badge>
           )}
         </TabsTrigger>
+        <TabsTrigger value="questions">Question Bank</TabsTrigger>
       </TabsList>
 
       <TabsContent value="overview">
@@ -235,6 +237,10 @@ export function ParentDashboardShell({
           alerts={dashboardData.alerts}
           onAlertDismissed={handleAlertDismissed}
         />
+      </TabsContent>
+
+      <TabsContent value="questions">
+        <QuestionUploader studentId={studentId} />
       </TabsContent>
     </Tabs>
   );
