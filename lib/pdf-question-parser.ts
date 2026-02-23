@@ -136,11 +136,56 @@ async function callClaude(systemPrompt: string, maxTokens: number): Promise<stri
   return response.content[0].type === 'text' ? response.content[0].text : '';
 }
 
+/**
+ * Split PDF text into chunks by module boundaries.
+ * SAT tests have 4 modules: RW Module 1, RW Module 2, Math Module 1, Math Module 2.
+ * Splitting avoids hitting token limits when parsing all ~98 questions at once.
+ */
+function splitTextByModule(pdfText: string): { label: string; text: string }[] {
+  // Look for module boundary patterns in the text
+  const modulePattern = /(?:^|\n)(.{0,50}(?:Module\s*[12]|MODULE\s*[12]).{0,50})(?:\n|$)/gi;
+  const matches = [...pdfText.matchAll(modulePattern)];
+
+  if (matches.length < 2) {
+    // Can't reliably split — return as single chunk
+    return [{ label: 'all', text: pdfText }];
+  }
+
+  const chunks: { label: string; text: string }[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].index!;
+    const end = i + 1 < matches.length ? matches[i + 1].index! : pdfText.length;
+    const chunkText = pdfText.slice(start, end);
+    // Only include chunks with meaningful content (at least 500 chars suggests questions)
+    if (chunkText.length > 500) {
+      chunks.push({ label: matches[i][1].trim(), text: chunkText });
+    }
+  }
+
+  return chunks.length > 0 ? chunks : [{ label: 'all', text: pdfText }];
+}
+
 export async function parseQuestionsPdf(pdfText: string): Promise<ParsedQuestion[]> {
+  const chunks = splitTextByModule(pdfText);
+
+  if (chunks.length > 1) {
+    // Parse each module chunk separately to avoid token limit issues
+    const allQuestions: ParsedQuestion[] = [];
+    for (const chunk of chunks) {
+      const parsed = await parseSingleQuestionsChunk(chunk.text);
+      allQuestions.push(...parsed);
+    }
+    return allQuestions;
+  }
+
+  return parseSingleQuestionsChunk(pdfText);
+}
+
+async function parseSingleQuestionsChunk(pdfText: string): Promise<ParsedQuestion[]> {
   const template = loadPrompt('pdf-parse-questions');
   const systemPrompt = interpolatePrompt(template, { pdf_text: pdfText });
 
-  const responseText = await callClaude(systemPrompt, 16000);
+  const responseText = await callClaude(systemPrompt, 32000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
@@ -179,10 +224,25 @@ export async function parseAnswersPdf(pdfText: string): Promise<ParsedAnswer[]> 
 }
 
 export async function parseExplanationsPdf(pdfText: string): Promise<ParsedExplanation[]> {
+  const chunks = splitTextByModule(pdfText);
+
+  if (chunks.length > 1) {
+    const allExplanations: ParsedExplanation[] = [];
+    for (const chunk of chunks) {
+      const parsed = await parseSingleExplanationsChunk(chunk.text);
+      allExplanations.push(...parsed);
+    }
+    return allExplanations;
+  }
+
+  return parseSingleExplanationsChunk(pdfText);
+}
+
+async function parseSingleExplanationsChunk(pdfText: string): Promise<ParsedExplanation[]> {
   const template = loadPrompt('pdf-parse-explanations');
   const systemPrompt = interpolatePrompt(template, { pdf_text: pdfText });
 
-  const responseText = await callClaude(systemPrompt, 16000);
+  const responseText = await callClaude(systemPrompt, 32000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
