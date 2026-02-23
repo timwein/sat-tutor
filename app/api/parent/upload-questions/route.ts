@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/parent-auth';
-import { processUploadedPdfs } from '@/lib/pdf-question-parser';
+import { processExtractedTexts } from '@/lib/pdf-question-parser';
 
 export const maxDuration = 120;
 
@@ -20,9 +20,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Parse FormData
-    const formData = await request.formData();
-    const testLabel = formData.get('testLabel') as string;
+    // Parse JSON body (text already extracted client-side)
+    const body = await request.json();
+    const { testLabel, pdfTexts } = body as {
+      testLabel: string;
+      pdfTexts: { name: string; text: string }[];
+    };
 
     if (!testLabel || !testLabel.trim()) {
       return NextResponse.json(
@@ -31,37 +34,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract PDF files
-    const files: { name: string; buffer: Buffer }[] = [];
-    for (const [key, value] of formData.entries()) {
-      if (key === 'files' && value instanceof File) {
-        const arrayBuffer = await value.arrayBuffer();
-        files.push({
-          name: value.name,
-          buffer: Buffer.from(arrayBuffer),
-        });
-      }
-    }
-
-    if (files.length < 2) {
+    if (!pdfTexts || !Array.isArray(pdfTexts) || pdfTexts.length < 2) {
       return NextResponse.json(
         { error: 'Please upload at least 2 PDF files (questions + answers)' },
         { status: 400 }
       );
     }
 
-    // Validate file types
-    for (const file of files) {
-      if (!file.name.toLowerCase().endsWith('.pdf')) {
-        return NextResponse.json(
-          { error: `Invalid file type: ${file.name}. Only PDF files are accepted.` },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Process PDFs through the pipeline
-    const result = await processUploadedPdfs(files, testLabel.trim());
+    // Process extracted texts through the pipeline
+    const result = await processExtractedTexts(pdfTexts, testLabel.trim());
 
     return NextResponse.json({
       questions: result.questions,

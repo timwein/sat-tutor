@@ -374,9 +374,6 @@ export async function processUploadedPdfs(
   files: { name: string; buffer: Buffer }[],
   testLabel: string
 ): Promise<UploadResult> {
-  const warnings: string[] = [];
-
-  // 1. Extract text from all PDFs
   const pdfTexts: { type: PdfType; text: string; name: string }[] = [];
   for (const file of files) {
     const text = await extractTextFromPdf(file.buffer);
@@ -384,7 +381,29 @@ export async function processUploadedPdfs(
     pdfTexts.push({ type, text, name: file.name });
   }
 
-  // 2. Validate: need at least questions + answers
+  return processFromTexts(pdfTexts, testLabel);
+}
+
+export async function processExtractedTexts(
+  texts: { name: string; text: string }[],
+  testLabel: string
+): Promise<UploadResult> {
+  const pdfTexts = texts.map((t) => ({
+    type: detectPdfType(t.text),
+    text: t.text,
+    name: t.name,
+  }));
+
+  return processFromTexts(pdfTexts, testLabel);
+}
+
+async function processFromTexts(
+  pdfTexts: { type: PdfType; text: string; name: string }[],
+  testLabel: string
+): Promise<UploadResult> {
+  const warnings: string[] = [];
+
+  // Validate: need at least questions + answers
   const questionsPdfs = pdfTexts.filter((p) => p.type === 'questions');
   const answersPdfs = pdfTexts.filter((p) => p.type === 'answers');
   const explanationsPdfs = pdfTexts.filter((p) => p.type === 'explanations');

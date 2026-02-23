@@ -82,6 +82,11 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
+  async function extractTextFromPdf(file: File): Promise<string> {
+    const { extractTextFromPdfClient } = await import('@/lib/pdf-extract-client');
+    return extractTextFromPdfClient(file);
+  }
+
   async function handleUpload() {
     if (!testLabel.trim()) {
       setError('Please enter a test label');
@@ -94,32 +99,35 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
 
     setError(null);
     setStep('processing');
-    setProcessingStatus('Uploading and extracting text from PDFs...');
 
     try {
-      const formData = new FormData();
-      formData.append('testLabel', testLabel.trim());
+      // Step 1: Extract text from PDFs in the browser
+      setProcessingStatus('Extracting text from PDFs...');
+      const pdfTexts: { name: string; text: string }[] = [];
       for (const file of files) {
-        formData.append('files', file);
+        setProcessingStatus(`Extracting text from ${file.name}...`);
+        const text = await extractTextFromPdf(file);
+        pdfTexts.push({ name: file.name, text });
       }
 
-      setProcessingStatus('Processing PDFs with AI... This may take up to 60 seconds.');
+      // Step 2: Send text to API for Claude processing
+      setProcessingStatus('Processing with AI... This may take up to 2 minutes.');
 
       const res = await fetch('/api/parent/upload-questions', {
         method: 'POST',
-        body: formData,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testLabel: testLabel.trim(), pdfTexts }),
       });
 
       if (!res.ok) {
+        const contentType = res.headers.get('content-type') || '';
         let message = 'Upload failed';
-        try {
+        if (contentType.includes('application/json')) {
           const data = await res.json();
           message = data.error || message;
-        } catch {
+        } else {
           const text = await res.text();
-          if (res.status === 413) message = 'PDF files are too large. Try smaller files.';
-          else if (res.status === 504) message = 'Processing timed out. Try fewer files.';
-          else message = text || `Server error (${res.status})`;
+          message = text || `Server error (${res.status})`;
         }
         throw new Error(message);
       }
@@ -146,8 +154,16 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to save');
+        const contentType = res.headers.get('content-type') || '';
+        let message = 'Failed to save';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          message = data.error || message;
+        } else {
+          const text = await res.text();
+          message = text || `Server error (${res.status})`;
+        }
+        throw new Error(message);
       }
 
       const data = await res.json();
