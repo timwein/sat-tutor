@@ -60,7 +60,7 @@ const HELP_BUTTONS: HelpButton[] = [
     sections: ['math', 'reading_writing'],
   },
   {
-    label: 'Help me eliminate',
+    label: 'Help me eliminate wrong answers',
     prompt: "Help me eliminate wrong answers. Walk through each choice and explain why it's likely right or wrong.",
     sections: ['math', 'reading_writing'],
   },
@@ -269,7 +269,7 @@ export function ExplanationPanel({
         </div>
 
         {/* Always-visible free-text input */}
-        {!isStreaming && explanation && (
+        {!isStreaming && (
           <div className="flex gap-2">
             <input
               type="text"
