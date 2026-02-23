@@ -278,7 +278,7 @@ export function ExplanationPanel({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSendMessage(userInput);
               }}
-              placeholder="Ask anything about this question..."
+              placeholder={exchangeCount > 0 ? "Enter your response..." : "Ask anything about this question..."}
               className="flex-1 rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:py-2 md:text-sm"
             />
             <Button
