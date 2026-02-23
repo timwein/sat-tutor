@@ -12,7 +12,15 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { ClassifiedQuestion } from '@/lib/pdf-question-parser';
+import type {
+  ClassifiedQuestion,
+  ParsedQuestion,
+  ParsedAnswer,
+  ParsedExplanation,
+  PdfType,
+  MergedQuestion,
+  ClassificationResult,
+} from '@/lib/pdf-question-parser';
 
 interface QuestionUploaderProps {
   studentId: string;
@@ -53,6 +61,72 @@ const SKILL_NAMES: Record<string, string> = {
   'M-19': 'Circles',
 };
 
+// Client-side PDF type detection (same logic as server)
+function detectPdfType(text: string): PdfType {
+  const first2000 = text.slice(0, 2000).toLowerCase();
+
+  const answerPattern = /(?:correct answer|answer[:\s]|^[\s]*\d+[.)]\s*[abcd]\s*$)/gim;
+  const answerMatches = first2000.match(answerPattern);
+  if (answerMatches && answerMatches.length >= 5) return 'answers';
+
+  if (first2000.includes('answer') && first2000.includes('domain') && first2000.includes('skill')) {
+    return 'answers';
+  }
+
+  const explanationKeywords = ['rationale', 'explanation', 'choice a is', 'choice b is', 'the correct answer is', 'this is correct because', 'is the best answer'];
+  const explanationHits = explanationKeywords.filter((kw) => first2000.includes(kw)).length;
+  if (explanationHits >= 2) return 'explanations';
+
+  return 'questions';
+}
+
+// Client-side deterministic matching (same logic as server)
+function matchAndMerge(
+  questions: ParsedQuestion[],
+  answers: ParsedAnswer[],
+  explanations: ParsedExplanation[]
+): { merged: MergedQuestion[]; warnings: string[] } {
+  const warnings: string[] = [];
+  const answerMap = new Map<string, ParsedAnswer>();
+  for (const a of answers) answerMap.set(`${a.module}_${a.questionNumber}`, a);
+  const explanationMap = new Map<string, ParsedExplanation>();
+  for (const e of explanations) explanationMap.set(`${e.module}_${e.questionNumber}`, e);
+
+  const merged: MergedQuestion[] = [];
+  for (const q of questions) {
+    const key = `${q.module}_${q.questionNumber}`;
+    const answer = answerMap.get(key);
+    if (!answer) { warnings.push(`No answer found for ${q.module} Q${q.questionNumber}`); continue; }
+    const explanation = explanationMap.get(key);
+    if (!explanation) warnings.push(`No explanation found for ${q.module} Q${q.questionNumber}`);
+    merged.push({
+      ...q,
+      correctAnswer: answer.correctAnswer,
+      explanation: explanation?.explanation ?? null,
+      distractorAnalysis: explanation?.distractorAnalysis ?? {},
+    });
+  }
+  return { merged, warnings };
+}
+
+async function apiCall<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const ct = res.headers.get('content-type') || '';
+    let msg = `Server error (${res.status})`;
+    if (ct.includes('application/json')) {
+      const data = await res.json();
+      msg = data.error || msg;
+    }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
 export function QuestionUploader({ studentId }: QuestionUploaderProps) {
   const [step, setStep] = useState<Step>('upload');
   const [testLabel, setTestLabel] = useState('');
@@ -82,59 +156,109 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function extractTextFromPdf(file: File): Promise<string> {
-    const { extractTextFromPdfClient } = await import('@/lib/pdf-extract-client');
-    return extractTextFromPdfClient(file);
-  }
-
   async function handleUpload() {
-    if (!testLabel.trim()) {
-      setError('Please enter a test label');
-      return;
-    }
-    if (files.length < 2) {
-      setError('Please upload at least 2 PDF files (questions + answers)');
-      return;
-    }
+    if (!testLabel.trim()) { setError('Please enter a test label'); return; }
+    if (files.length < 2) { setError('Please upload at least 2 PDF files (questions + answers)'); return; }
 
     setError(null);
     setStep('processing');
 
     try {
       // Step 1: Extract text from PDFs in the browser
-      setProcessingStatus('Extracting text from PDFs...');
-      const pdfTexts: { name: string; text: string }[] = [];
+      const pdfTexts: { name: string; text: string; type: PdfType }[] = [];
       for (const file of files) {
         setProcessingStatus(`Extracting text from ${file.name}...`);
-        const text = await extractTextFromPdf(file);
-        pdfTexts.push({ name: file.name, text });
+        const { extractTextFromPdfClient } = await import('@/lib/pdf-extract-client');
+        const text = await extractTextFromPdfClient(file);
+        const type = detectPdfType(text);
+        pdfTexts.push({ name: file.name, text, type });
       }
 
-      // Step 2: Send text to API for Claude processing
-      setProcessingStatus('Processing with AI... This may take up to 2 minutes.');
+      // Validate
+      const questionsTexts = pdfTexts.filter((p) => p.type === 'questions');
+      const answersTexts = pdfTexts.filter((p) => p.type === 'answers');
+      const explanationsTexts = pdfTexts.filter((p) => p.type === 'explanations');
 
-      const res = await fetch('/api/parent/upload-questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ testLabel: testLabel.trim(), pdfTexts }),
+      if (questionsTexts.length === 0) {
+        throw new Error('Could not detect a questions PDF. Detected: ' + pdfTexts.map(p => `${p.name} → ${p.type}`).join(', '));
+      }
+      if (answersTexts.length === 0) {
+        throw new Error('Could not detect an answers PDF. Detected: ' + pdfTexts.map(p => `${p.name} → ${p.type}`).join(', '));
+      }
+
+      // Step 2: Parse each PDF type with Claude (separate API calls)
+      setProcessingStatus('Parsing questions PDF with AI... (1/3)');
+      const questionsText = questionsTexts.map((p) => p.text).join('\n\n---NEW PDF---\n\n');
+      const qResult = await apiCall<{ data: ParsedQuestion[] }>(
+        '/api/parent/upload-questions/parse',
+        { type: 'questions', text: questionsText }
+      );
+
+      setProcessingStatus('Parsing answers PDF with AI... (2/3)');
+      const answersText = answersTexts.map((p) => p.text).join('\n\n');
+      const aResult = await apiCall<{ data: ParsedAnswer[] }>(
+        '/api/parent/upload-questions/parse',
+        { type: 'answers', text: answersText }
+      );
+
+      let parsedExplanations: ParsedExplanation[] = [];
+      const warnings: string[] = [];
+      if (explanationsTexts.length > 0) {
+        setProcessingStatus('Parsing explanations PDF with AI... (3/3)');
+        const explanationsText = explanationsTexts.map((p) => p.text).join('\n\n');
+        const eResult = await apiCall<{ data: ParsedExplanation[] }>(
+          '/api/parent/upload-questions/parse',
+          { type: 'explanations', text: explanationsText }
+        );
+        parsedExplanations = eResult.data;
+      } else {
+        warnings.push('No explanations PDF detected — questions will have no explanations.');
+      }
+
+      // Step 3: Deterministic match (runs in browser, instant)
+      setProcessingStatus('Matching questions with answers...');
+      const { merged, warnings: matchWarnings } = matchAndMerge(
+        qResult.data,
+        aResult.data,
+        parsedExplanations
+      );
+      warnings.push(...matchWarnings);
+
+      // Step 4: Classify in batches (separate API calls)
+      const BATCH_SIZE = 15;
+      const allClassifications = new Map<string, ClassificationResult>();
+      const totalBatches = Math.ceil(merged.length / BATCH_SIZE);
+
+      for (let i = 0; i < merged.length; i += BATCH_SIZE) {
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        setProcessingStatus(`Classifying skills & difficulty... (batch ${batchNum}/${totalBatches})`);
+        const batch = merged.slice(i, i + BATCH_SIZE);
+        const cResult = await apiCall<{ classifications: ClassificationResult[] }>(
+          '/api/parent/upload-questions/classify',
+          { batch }
+        );
+        for (const r of cResult.classifications) {
+          allClassifications.set(`${r.module}_${r.questionNumber}`, r);
+        }
+      }
+
+      // Step 5: Apply classifications
+      const classified: ClassifiedQuestion[] = merged.map((q) => {
+        const c = allClassifications.get(`${q.module}_${q.questionNumber}`);
+        return {
+          ...q,
+          subSkillId: c?.subSkillId ?? (q.section === 'math' ? 'M-01' : 'RW-01'),
+          difficulty: c?.difficulty ?? 3,
+        };
       });
 
-      if (!res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        let message = 'Upload failed';
-        if (contentType.includes('application/json')) {
-          const data = await res.json();
-          message = data.error || message;
-        } else {
-          const text = await res.text();
-          message = text || `Server error (${res.status})`;
-        }
-        throw new Error(message);
-      }
-
-      const data = await res.json();
-      setQuestions(data.questions);
-      setSummary(data.summary);
+      setQuestions(classified);
+      setSummary({
+        total: qResult.data.length,
+        matched: merged.length,
+        classified: classified.length,
+        warnings,
+      });
       setStep('preview');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload failed');
@@ -147,26 +271,10 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     setProcessingStatus('Saving questions to database...');
 
     try {
-      const res = await fetch('/api/parent/upload-questions/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions, testLabel: testLabel.trim() }),
-      });
-
-      if (!res.ok) {
-        const contentType = res.headers.get('content-type') || '';
-        let message = 'Failed to save';
-        if (contentType.includes('application/json')) {
-          const data = await res.json();
-          message = data.error || message;
-        } else {
-          const text = await res.text();
-          message = text || `Server error (${res.status})`;
-        }
-        throw new Error(message);
-      }
-
-      const data = await res.json();
+      const data = await apiCall<{ inserted: number }>(
+        '/api/parent/upload-questions/confirm',
+        { questions, testLabel: testLabel.trim() }
+      );
       setInsertedCount(data.inserted);
       setStep('done');
     } catch (err) {
@@ -210,11 +318,8 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
               </div>
             )}
 
-            {/* Test label */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">
-                Test Label
-              </label>
+              <label className="text-sm font-medium text-gray-700">Test Label</label>
               <input
                 type="text"
                 value={testLabel}
@@ -227,49 +332,29 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
               </p>
             </div>
 
-            {/* File upload */}
             <div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept=".pdf"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+              <input ref={fileInputRef} type="file" multiple accept=".pdf" onChange={handleFileSelect} className="hidden" />
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 text-sm text-gray-500 transition-colors hover:border-blue-400 hover:text-blue-600"
               >
                 <FileText className="h-6 w-6" />
-                <span>Click to select PDF files (or drag & drop)</span>
+                <span>Click to select PDF files</span>
               </button>
             </div>
 
-            {/* Selected files */}
             {files.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">
-                  Selected files ({files.length})
-                </p>
+                <p className="text-sm font-medium text-gray-700">Selected files ({files.length})</p>
                 {files.map((file, i) => (
-                  <div
-                    key={`${file.name}-${i}`}
-                    className="flex items-center justify-between rounded-lg border px-3 py-2"
-                  >
+                  <div key={`${file.name}-${i}`} className="flex items-center justify-between rounded-lg border px-3 py-2">
                     <div className="flex items-center gap-2 text-sm">
                       <FileText className="h-4 w-4 text-red-500" />
                       <span className="truncate">{file.name}</span>
-                      <span className="text-xs text-gray-400">
-                        ({(file.size / 1024).toFixed(0)} KB)
-                      </span>
+                      <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(0)} KB)</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(i)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
+                    <button type="button" onClick={() => removeFile(i)} className="text-gray-400 hover:text-gray-600">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -277,11 +362,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
               </div>
             )}
 
-            <Button
-              onClick={handleUpload}
-              disabled={files.length < 2 || !testLabel.trim()}
-              className="w-full"
-            >
+            <Button onClick={handleUpload} disabled={files.length < 2 || !testLabel.trim()} className="w-full">
               Upload & Process
             </Button>
           </CardContent>
@@ -297,9 +378,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
         <CardContent className="flex flex-col items-center gap-4 py-16">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
           <p className="text-sm text-gray-600">{processingStatus}</p>
-          <p className="text-xs text-gray-400">
-            Please don&apos;t close this page
-          </p>
+          <p className="text-xs text-gray-400">Please don&apos;t close this page</p>
         </CardContent>
       </Card>
     );
@@ -319,13 +398,8 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
           </div>
         )}
 
-        {/* Summary */}
         <Card>
-          <CardHeader>
-            <CardTitle>
-              Parsed Results — {testLabel}
-            </CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Parsed Results — {testLabel}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
@@ -333,39 +407,28 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
                 <p className="text-xs text-gray-500">Questions found</p>
               </div>
               <div>
-                <span className="text-2xl font-bold text-green-600">
-                  {summary.matched}
-                </span>
+                <span className="text-2xl font-bold text-green-600">{summary.matched}</span>
                 <p className="text-xs text-gray-500">Matched w/ answers</p>
               </div>
               <div>
-                <span className="text-2xl font-bold text-blue-600">
-                  {summary.classified}
-                </span>
+                <span className="text-2xl font-bold text-blue-600">{summary.classified}</span>
                 <p className="text-xs text-gray-500">Classified</p>
               </div>
             </div>
             {summary.warnings.length > 0 && (
               <div className="mt-4 space-y-1">
-                <p className="text-xs font-medium text-amber-600">
-                  Warnings ({summary.warnings.length}):
-                </p>
+                <p className="text-xs font-medium text-amber-600">Warnings ({summary.warnings.length}):</p>
                 {summary.warnings.slice(0, 5).map((w, i) => (
-                  <p key={i} className="text-xs text-amber-500">
-                    {w}
-                  </p>
+                  <p key={i} className="text-xs text-amber-500">{w}</p>
                 ))}
                 {summary.warnings.length > 5 && (
-                  <p className="text-xs text-amber-400">
-                    ...and {summary.warnings.length - 5} more
-                  </p>
+                  <p className="text-xs text-amber-400">...and {summary.warnings.length - 5} more</p>
                 )}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Questions table */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -388,29 +451,17 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
                 <tbody>
                   {questions.map((q, i) => (
                     <tr key={i} className="border-b last:border-0">
-                      <td className="py-1.5 pr-2 text-gray-400">
-                        {q.questionNumber}
+                      <td className="py-1.5 pr-2 text-gray-400">{q.questionNumber}</td>
+                      <td className="py-1.5 pr-2 whitespace-nowrap">
+                        <Badge variant="outline" className="text-xs">{q.module}</Badge>
                       </td>
                       <td className="py-1.5 pr-2 whitespace-nowrap">
-                        <Badge variant="outline" className="text-xs">
-                          {q.module}
-                        </Badge>
-                      </td>
-                      <td className="py-1.5 pr-2 whitespace-nowrap">
-                        <span
-                          className="text-xs"
-                          title={SKILL_NAMES[q.subSkillId] ?? q.subSkillId}
-                        >
-                          {q.subSkillId}
-                        </span>
+                        <span className="text-xs" title={SKILL_NAMES[q.subSkillId] ?? q.subSkillId}>{q.subSkillId}</span>
                       </td>
                       <td className="py-1.5 pr-2">{q.difficulty}</td>
-                      <td className="py-1.5 pr-2 font-medium">
-                        {q.correctAnswer}
-                      </td>
+                      <td className="py-1.5 pr-2 font-medium">{q.correctAnswer}</td>
                       <td className="py-1.5 max-w-xs truncate text-gray-600">
-                        {q.questionText.slice(0, 60)}
-                        {q.questionText.length > 60 ? '...' : ''}
+                        {q.questionText.slice(0, 60)}{q.questionText.length > 60 ? '...' : ''}
                       </td>
                     </tr>
                   ))}
@@ -421,9 +472,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
         </Card>
 
         <div className="flex gap-3">
-          <Button variant="outline" onClick={reset} className="flex-1">
-            Cancel
-          </Button>
+          <Button variant="outline" onClick={reset} className="flex-1">Cancel</Button>
           <Button onClick={handleConfirm} className="flex-1">
             Confirm & Save {questions.length} Questions
           </Button>
@@ -440,15 +489,10 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
           <CheckCircle className="h-12 w-12 text-green-600" />
           <h3 className="text-lg font-semibold">Import Complete</h3>
           <p className="text-sm text-gray-600">
-            {insertedCount} questions from &ldquo;{testLabel}&rdquo; have been
-            imported to the question bank.
+            {insertedCount} questions from &ldquo;{testLabel}&rdquo; have been imported to the question bank.
           </p>
-          <p className="text-xs text-gray-400">
-            These questions will now appear in study sessions.
-          </p>
-          <Button onClick={reset} variant="outline">
-            Upload Another Test
-          </Button>
+          <p className="text-xs text-gray-400">These questions will now appear in study sessions.</p>
+          <Button onClick={reset} variant="outline">Upload Another Test</Button>
         </CardContent>
       </Card>
     );

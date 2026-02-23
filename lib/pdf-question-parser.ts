@@ -273,11 +273,45 @@ export function matchAndMerge(
 // Batch Classification
 // ============================================
 
-interface ClassificationResult {
+export interface ClassificationResult {
   questionNumber: number;
   module: string;
   subSkillId: string;
   difficulty: number;
+}
+
+export async function classifyBatch(
+  batch: MergedQuestion[]
+): Promise<ClassificationResult[]> {
+  const questionsForClaude = batch.map((q) => ({
+    module: q.module,
+    questionNumber: q.questionNumber,
+    section: q.section,
+    questionText: q.questionText,
+    passageText: q.passageText ? q.passageText.slice(0, 500) + '...' : null,
+    answerChoices: q.answerChoices,
+    correctAnswer: q.correctAnswer,
+  }));
+
+  const template = loadPrompt('classify-questions');
+  const systemPrompt = interpolatePrompt(template, {
+    questions_json: JSON.stringify(questionsForClaude, null, 2),
+  });
+
+  const responseText = await callClaude(systemPrompt, 2000);
+  const jsonStr = extractJsonFromResponse(responseText);
+
+  try {
+    return JSON.parse(jsonStr) as ClassificationResult[];
+  } catch {
+    // If classification fails, assign defaults
+    return batch.map((q) => ({
+      questionNumber: q.questionNumber,
+      module: q.module,
+      subSkillId: q.section === 'math' ? 'M-01' : 'RW-01',
+      difficulty: 3,
+    }));
+  }
 }
 
 export async function classifyQuestions(
@@ -286,53 +320,17 @@ export async function classifyQuestions(
   const BATCH_SIZE = 15;
   const allClassifications = new Map<string, ClassificationResult>();
 
-  // Process in batches
   for (let i = 0; i < questions.length; i += BATCH_SIZE) {
     const batch = questions.slice(i, i + BATCH_SIZE);
-
-    const questionsForClaude = batch.map((q) => ({
-      module: q.module,
-      questionNumber: q.questionNumber,
-      section: q.section,
-      questionText: q.questionText,
-      passageText: q.passageText ? q.passageText.slice(0, 500) + '...' : null,
-      answerChoices: q.answerChoices,
-      correctAnswer: q.correctAnswer,
-    }));
-
-    const template = loadPrompt('classify-questions');
-    const systemPrompt = interpolatePrompt(template, {
-      questions_json: JSON.stringify(questionsForClaude, null, 2),
-    });
-
-    const responseText = await callClaude(systemPrompt, 2000);
-    const jsonStr = extractJsonFromResponse(responseText);
-
-    try {
-      const results = JSON.parse(jsonStr) as ClassificationResult[];
-      for (const r of results) {
-        const key = matchKey(r.module, r.questionNumber);
-        allClassifications.set(key, r);
-      }
-    } catch {
-      // If a batch fails, assign defaults
-      for (const q of batch) {
-        const key = matchKey(q.module, q.questionNumber);
-        allClassifications.set(key, {
-          questionNumber: q.questionNumber,
-          module: q.module,
-          subSkillId: q.section === 'math' ? 'M-01' : 'RW-01',
-          difficulty: 3,
-        });
-      }
+    const results = await classifyBatch(batch);
+    for (const r of results) {
+      allClassifications.set(matchKey(r.module, r.questionNumber), r);
     }
   }
 
-  // Merge classifications into questions
   return questions.map((q) => {
     const key = matchKey(q.module, q.questionNumber);
     const classification = allClassifications.get(key);
-
     return {
       ...q,
       subSkillId: classification?.subSkillId ?? (q.section === 'math' ? 'M-01' : 'RW-01'),
