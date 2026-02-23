@@ -1,0 +1,207 @@
+[
+  {
+    "question_id": "q_m_001",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-01",
+    "difficulty": 2,
+    "question_text": "If 3x + 7 = 22, what is the value of x?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "3", "B": "5", "C": "7", "D": "15" },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "subtracted_7_then_divided_by_7_instead_of_3",
+      "C": "divided_22_by_3_and_rounded_down_or_confused_constant",
+      "D": "subtracted_7_from_22_but_forgot_to_divide_by_3"
+    },
+    "explanation": "Step 1: Subtract 7 from both sides: 3x = 22 - 7 = 15. Step 2: Divide both sides by 3: x = 15 / 3 = 5.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_002",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-03",
+    "difficulty": 2,
+    "question_text": "A line passes through the points (1, 4) and (3, 10). What is the slope of the line?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "2", "B": "3", "C": "6", "D": "7" },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "computed_difference_of_x_values_divided_by_difference_of_y_values_inverted_slope",
+      "C": "computed_only_the_difference_of_y_values_without_dividing",
+      "D": "added_y_coordinates_and_divided_by_number_of_points"
+    },
+    "explanation": "The slope formula is m = (y2 - y1) / (x2 - x1). Substituting the given points: m = (10 - 4) / (3 - 1) = 6 / 2 = 3.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_003",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-04",
+    "difficulty": 3,
+    "question_text": "A restaurant sells tacos for $3 each and burritos for $5 each. On a certain day, the restaurant sold a total of 40 items and collected $160. How many tacos were sold?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "10", "B": "15", "C": "20", "D": "30" },
+    "correct_answer": "C",
+    "distractor_analysis": {
+      "A": "solved_for_burritos_then_subtracted_incorrectly",
+      "B": "set_up_equations_incorrectly_by_swapping_prices",
+      "D": "solved_for_the_number_of_burritos_instead_of_tacos"
+    },
+    "explanation": "Let t = tacos and b = burritos. Set up the system: t + b = 40 and 3t + 5b = 160. From equation 1, b = 40 - t. Substitute into equation 2: 3t + 5(40 - t) = 160 -> 3t + 200 - 5t = 160 -> -2t = -40 -> t = 20.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_004",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-05",
+    "difficulty": 3,
+    "question_text": "A student needs at least 480 points total on 6 tests to earn an A in a class. The student has scored 78, 85, 90, 72, and 80 on the first five tests. What is the minimum score the student needs on the sixth test?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "73", "B": "75", "C": "80", "D": "85" },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "arithmetic_error_in_summing_first_five_scores",
+      "C": "used_the_average_of_the_five_scores_as_the_answer",
+      "D": "incorrectly_calculated_needing_to_beat_the_current_average"
+    },
+    "explanation": "Sum of first five scores: 78 + 85 + 90 + 72 + 80 = 405. The student needs at least 480 total, so the minimum sixth score is 480 - 405 = 75.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_005",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-08",
+    "difficulty": 3,
+    "question_text": "What are the solutions to the equation x^2 - 5x + 6 = 0?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "x = 1 and x = 6", "B": "x = 2 and x = 3", "C": "x = -2 and x = -3", "D": "x = -1 and x = -6" },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "found_factors_of_6_that_do_not_sum_to_negative_5",
+      "C": "correct_factor_magnitudes_but_sign_error_both_negative",
+      "D": "found_factors_of_6_with_wrong_signs_and_wrong_pair"
+    },
+    "explanation": "Factor the quadratic: x^2 - 5x + 6 = (x - 2)(x - 3) = 0. Setting each factor to zero gives x = 2 and x = 3. Check: 2 + 3 = 5 (matches the coefficient) and 2 * 3 = 6 (matches the constant).",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_006",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-08",
+    "difficulty": 4,
+    "question_text": "The function f(x) = -2(x - 3)^2 + 18 models the height, in feet, of a projectile x seconds after launch. What is the maximum height the projectile reaches, and at what time does it occur?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": {
+      "A": "Maximum height of 18 feet at x = 3 seconds",
+      "B": "Maximum height of 3 feet at x = 18 seconds",
+      "C": "Maximum height of 36 feet at x = 3 seconds",
+      "D": "Maximum height of 18 feet at x = 6 seconds"
+    },
+    "correct_answer": "A",
+    "distractor_analysis": {
+      "B": "swapped_vertex_coordinates_confusing_time_and_height",
+      "C": "multiplied_18_by_2_thinking_the_coefficient_increases_the_maximum",
+      "D": "doubled_the_x_coordinate_of_the_vertex_incorrectly"
+    },
+    "explanation": "The function is in vertex form: f(x) = a(x - h)^2 + k, where the vertex is (h, k). Here, h = 3 and k = 18. Since a = -2 is negative, the parabola opens downward, so the vertex is a maximum. The maximum height is 18 feet at x = 3 seconds.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_007",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-10",
+    "difficulty": 2,
+    "question_text": "A car travels 150 miles in 2.5 hours. At the same rate, how many miles will it travel in 4 hours?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "200", "B": "240", "C": "250", "D": "300" },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "divided_150_by_3_instead_of_2.5_then_multiplied_by_4",
+      "C": "added_100_to_150_instead_of_computing_rate",
+      "D": "doubled_150_without_considering_the_actual_time_ratio"
+    },
+    "explanation": "Step 1: Find the rate: 150 miles / 2.5 hours = 60 miles per hour. Step 2: Multiply by 4 hours: 60 * 4 = 240 miles.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_008",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-11",
+    "difficulty": 3,
+    "question_text": "A store marks up the wholesale price of a jacket by 60% to set the retail price. During a sale, the store offers a 25% discount off the retail price. If the wholesale price of the jacket is $80, what is the sale price?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "$84.00", "B": "$96.00", "C": "$100.00", "D": "$108.00" },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "applied_a_net_35_percent_markup_instead_of_sequential_calculations",
+      "C": "computed_retail_price_correctly_but_subtracted_a_flat_28_instead_of_25_percent",
+      "D": "only_applied_the_60_percent_markup_and_subtracted_20_instead_of_25_percent"
+    },
+    "explanation": "Step 1: Retail price = $80 + 60% of $80 = $80 + $48 = $128. Step 2: Sale discount = 25% of $128 = $32. Step 3: Sale price = $128 - $32 = $96.00.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_009",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-14",
+    "difficulty": 4,
+    "question_text": "A bag contains 5 red marbles, 3 blue marbles, and 2 green marbles. Two marbles are drawn at random without replacement. What is the probability that both marbles are red?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "1/4", "B": "2/9", "C": "1/5", "D": "5/18" },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "computed_5_out_of_10_squared_using_replacement_instead_of_without",
+      "C": "divided_2_by_10_confusing_numerator_with_number_of_draws",
+      "D": "used_incorrect_denominator_by_not_reducing_fraction_properly"
+    },
+    "explanation": "Total marbles = 5 + 3 + 2 = 10. P(first red) = 5/10. After drawing one red, there are 4 red out of 9 total remaining. P(second red | first red) = 4/9. P(both red) = (5/10) * (4/9) = 20/90 = 2/9.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  },
+  {
+    "question_id": "q_m_010",
+    "source": "seed_bank",
+    "section": "math",
+    "sub_skill_id": "M-16",
+    "difficulty": 3,
+    "question_text": "A cylindrical water tank has a radius of 4 feet and a height of 10 feet. What is the volume of the tank, in cubic feet? (Use pi = 3.14)",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": { "A": "125.60", "B": "251.20", "C": "502.40", "D": "1,256.00" },
+    "correct_answer": "C",
+    "distractor_analysis": {
+      "A": "used_radius_instead_of_radius_squared_in_formula",
+      "B": "used_diameter_of_4_instead_of_radius_of_4_computing_pi_times_2_squared_times_10",
+      "D": "squared_the_height_instead_of_the_radius_or_multiplied_by_extra_factor"
+    },
+    "explanation": "The volume of a cylinder is V = pi * r^2 * h. Substituting: V = 3.14 * (4)^2 * 10 = 3.14 * 16 * 10 = 3.14 * 160 = 502.40 cubic feet.",
+    "is_ai_generated": false,
+    "tags": ["calculator_allowed"]
+  }
+]

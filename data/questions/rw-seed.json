@@ -1,0 +1,252 @@
+[
+  {
+    "question_id": "q_rw_001",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-01",
+    "difficulty": 2,
+    "question_text": "Which choice best states the main idea of the passage?",
+    "passage_id": "p_rw_001",
+    "passage_text": "Coral reefs, often called the \"rainforests of the sea,\" support approximately 25% of all marine species despite covering less than 1% of the ocean floor. These underwater ecosystems provide food and shelter for thousands of species of fish, invertebrates, and marine plants. However, rising ocean temperatures and increased acidity are causing widespread coral bleaching, a phenomenon in which corals expel the symbiotic algae that give them color and nutrients. Scientists estimate that nearly half of the world's coral reefs have been lost in the past 30 years, and without intervention, the remaining reefs could disappear within decades.",
+    "answer_choices": {
+      "A": "Coral reefs are the most colorful ecosystems found in the ocean.",
+      "B": "Coral reefs are vital marine ecosystems that face serious threats from changing ocean conditions.",
+      "C": "Scientists have been unable to find solutions to coral bleaching.",
+      "D": "Marine species will become extinct if coral reefs disappear."
+    },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "focuses_on_a_minor_detail_about_appearance_rather_than_the_central_idea",
+      "C": "introduces_a_claim_not_supported_by_the_passage_which_does_not_say_solutions_are_impossible",
+      "D": "makes_an_extreme_claim_about_extinction_that_goes_beyond_what_the_passage_states"
+    },
+    "explanation": "The passage introduces coral reefs as important ecosystems (supporting 25% of marine species) and then describes the threats they face (bleaching, loss). Choice B captures both the importance of reefs and the threat, making it the best summary of the main idea.",
+    "is_ai_generated": false,
+    "tags": ["passage_based"]
+  },
+  {
+    "question_id": "q_rw_002",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-02",
+    "difficulty": 4,
+    "question_text": "A student claims that social media usage among teenagers is associated with increased rates of anxiety. Which finding, if true, would most directly support this claim?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": {
+      "A": "A survey found that 70% of teenagers use social media daily.",
+      "B": "A longitudinal study found that teenagers who spent more than 3 hours per day on social media were twice as likely to report symptoms of anxiety compared to those who spent less than 1 hour.",
+      "C": "A study found that teenagers prefer visual social media platforms over text-based ones.",
+      "D": "Researchers noted that anxiety rates among teenagers have increased over the past decade."
+    },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "establishes_prevalence_of_usage_but_does_not_connect_it_to_anxiety",
+      "C": "describes_platform_preferences_which_are_irrelevant_to_the_anxiety_claim",
+      "D": "shows_anxiety_increase_but_does_not_establish_association_with_social_media"
+    },
+    "explanation": "The claim requires evidence linking social media usage to anxiety. Choice B provides a direct comparison between high and low social media users and their anxiety rates, establishing the association the student claims. The other choices either lack a connection to anxiety (A, C) or lack a connection to social media (D).",
+    "is_ai_generated": false,
+    "tags": ["command_of_evidence"]
+  },
+  {
+    "question_id": "q_rw_003",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-04",
+    "difficulty": 3,
+    "question_text": "Based on the passage, it can most reasonably be inferred that the author believes which of the following about urban green spaces?",
+    "passage_id": "p_rw_003",
+    "passage_text": "Cities around the world are investing in urban green spaces -- parks, community gardens, and tree-lined corridors -- as part of broader public health strategies. Research from the University of Exeter found that people who spent at least two hours per week in natural environments reported significantly better health and well-being than those who did not. Urban planners are now incorporating these findings into city design, creating pocket parks in dense neighborhoods and converting abandoned lots into community gardens. Critics argue that such projects can drive up property values and displace lower-income residents, but proponents counter that equitable distribution of green spaces can address these concerns while still improving public health outcomes.",
+    "answer_choices": {
+      "A": "Urban green spaces are primarily valuable for their aesthetic appeal.",
+      "B": "The benefits of urban green spaces can be realized without displacing residents if implemented thoughtfully.",
+      "C": "Urban green spaces are too expensive to be practical in most cities.",
+      "D": "Only large parks provide meaningful health benefits to urban residents."
+    },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "reduces_the_authors_argument_to_aesthetics_when_the_passage_focuses_on_health",
+      "C": "introduces_a_cost_argument_not_present_in_the_passage",
+      "D": "contradicts_the_passage_which_mentions_pocket_parks_and_community_gardens_as_beneficial"
+    },
+    "explanation": "The passage acknowledges the criticism that green spaces can displace residents but ends by noting that proponents believe 'equitable distribution' can address these concerns. This suggests the author sees a path where green spaces improve health without displacement, making B the best inference.",
+    "is_ai_generated": false,
+    "tags": ["passage_based", "inference"]
+  },
+  {
+    "question_id": "q_rw_004",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-05",
+    "difficulty": 3,
+    "question_text": "As used in the sentence, 'The researcher's findings were met with considerable skepticism by her peers, who found the methodology dubious,' the word 'dubious' most nearly means:",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": {
+      "A": "innovative",
+      "B": "questionable",
+      "C": "complicated",
+      "D": "dangerous"
+    },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "confuses_dubious_with_novel_missing_the_negative_connotation_of_skepticism",
+      "C": "associates_academic_methodology_with_complexity_rather_than_doubt",
+      "D": "selects_a_negative_word_but_one_unrelated_to_the_meaning_of_doubt_or_uncertainty"
+    },
+    "explanation": "The context clue is 'skepticism,' which means doubt. 'Dubious' means doubtful or questionable. The peers were skeptical, so they found the methodology questionable. 'Innovative' (A) is positive, 'complicated' (C) is neutral, and 'dangerous' (D) is negative but unrelated to doubt.",
+    "is_ai_generated": false,
+    "tags": ["vocabulary_in_context"]
+  },
+  {
+    "question_id": "q_rw_005",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-06",
+    "difficulty": 3,
+    "question_text": "Which choice best describes the function of the underlined sentence in the overall structure of the passage?",
+    "passage_id": "p_rw_005",
+    "passage_text": "The discovery of penicillin in 1928 by Alexander Fleming is often portrayed as a happy accident -- a case of a scientist stumbling upon a breakthrough. [UNDERLINED: While it is true that Fleming noticed a mold killing bacteria on a petri dish he had left uncovered, the development of penicillin into a usable drug required over a decade of deliberate, painstaking research by Howard Florey and Ernst Boris Chain.] Their work, which earned all three scientists the Nobel Prize in 1945, involved isolating the active compound, testing it in clinical trials, and scaling up production. The narrative of accidental discovery, while appealing, obscures the rigorous effort that transforms an observation into a life-saving medicine.",
+    "answer_choices": {
+      "A": "It provides background information about Alexander Fleming's early career.",
+      "B": "It qualifies a common narrative by introducing additional context about the effort required.",
+      "C": "It presents a counterargument to the claim that penicillin was an important discovery.",
+      "D": "It summarizes the main findings of Florey and Chain's research."
+    },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "the_sentence_is_not_about_Flemings_career_but_about_the_development_process",
+      "C": "the_passage_does_not_dispute_the_importance_of_penicillin_only_the_simplistic_narrative",
+      "D": "the_sentence_acknowledges_the_accident_and_adds_nuance_rather_than_summarizing_findings"
+    },
+    "explanation": "The underlined sentence begins with 'While it is true that...' which acknowledges the common narrative (accidental discovery) before introducing the qualifier: it took deliberate research to develop penicillin into a usable drug. This qualifies (adds nuance to) the 'happy accident' narrative rather than rejecting it entirely.",
+    "is_ai_generated": false,
+    "tags": ["passage_based", "text_structure"]
+  },
+  {
+    "question_id": "q_rw_006",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-07",
+    "difficulty": 4,
+    "question_text": "Text 1: Historian Margaret Chen argues that the construction of transcontinental railroads in the 19th century was the single most important factor in the economic development of the western United States, enabling the rapid transport of goods and people that fueled growth.\n\nText 2: Economic historian David Okoye contends that while railroads were significant, their impact has been overstated. He points to research showing that canal systems, regional roads, and telegraph networks contributed equally to western economic development, and that many towns prospered before rail lines reached them.\n\nBased on the two texts, how would Okoye most likely respond to Chen's claim?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": {
+      "A": "He would agree that railroads were important but argue that they were one of several factors rather than the single most important one.",
+      "B": "He would reject the idea that any transportation infrastructure contributed to western economic development.",
+      "C": "He would argue that canal systems were more important than railroads.",
+      "D": "He would agree with Chen's claim and add additional supporting evidence."
+    },
+    "correct_answer": "A",
+    "distractor_analysis": {
+      "B": "too_extreme_as_Okoye_acknowledges_railroads_were_significant",
+      "C": "misrepresents_Okoyes_position_which_is_about_multiple_equal_factors_not_canal_superiority",
+      "D": "contradicts_the_passage_since_Okoye_explicitly_challenges_Chens_central_claim"
+    },
+    "explanation": "Okoye says railroads 'were significant' but their impact 'has been overstated.' He argues other infrastructure 'contributed equally.' This means he would agree railroads mattered but disagree that they were the 'single most important factor,' making A the best response.",
+    "is_ai_generated": false,
+    "tags": ["cross_text"]
+  },
+  {
+    "question_id": "q_rw_007",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-08",
+    "difficulty": 4,
+    "question_text": "A student is writing a research paper about renewable energy adoption and wants to emphasize that solar energy costs have decreased dramatically. The student has gathered the following notes:\n- In 2010, the cost of solar panels was approximately $2.50 per watt.\n- By 2024, the cost had dropped to approximately $0.25 per watt.\n- The International Energy Agency declared solar the \"cheapest electricity in history\" in 2020.\n- Over 130 countries have set net-zero emissions targets.\n\nWhich choice most effectively uses the relevant information from the notes to accomplish the student's goal?",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": {
+      "A": "Solar energy has become cheaper over the years, and many countries now have net-zero targets.",
+      "B": "The cost of solar panels plummeted from $2.50 per watt in 2010 to just $0.25 per watt by 2024 -- a 90% reduction that led the International Energy Agency to declare solar the 'cheapest electricity in history.'",
+      "C": "Over 130 countries have set net-zero emissions targets, which demonstrates the growing popularity of renewable energy sources like solar.",
+      "D": "The International Energy Agency made an important declaration about solar energy in 2020, and costs have changed since 2010."
+    },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "too_vague_and_includes_irrelevant_net_zero_information_without_specific_cost_data",
+      "C": "focuses_on_net_zero_targets_rather_than_cost_decrease_which_is_the_stated_goal",
+      "D": "vague_about_both_the_declaration_and_cost_changes_failing_to_emphasize_dramatic_decrease"
+    },
+    "explanation": "The student's goal is to emphasize the dramatic cost decrease of solar energy. Choice B uses specific numbers ($2.50 to $0.25), calculates the percentage decrease (90%), and reinforces the point with the IEA declaration. It directly accomplishes the stated goal with precise, relevant data.",
+    "is_ai_generated": false,
+    "tags": ["rhetorical_synthesis"]
+  },
+  {
+    "question_id": "q_rw_008",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-09",
+    "difficulty": 2,
+    "question_text": "The Arctic fox has several adaptations for surviving in extreme cold. Its thick fur changes color with the seasons, providing camouflage against snow in winter and tundra in summer. _______ the fox's compact body shape minimizes heat loss by reducing the surface area exposed to frigid temperatures.",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": {
+      "A": "However,",
+      "B": "For instance,",
+      "C": "Additionally,",
+      "D": "Nevertheless,"
+    },
+    "correct_answer": "C",
+    "distractor_analysis": {
+      "A": "implies_contrast_but_both_sentences_describe_cold_weather_adaptations",
+      "B": "implies_the_body_shape_is_an_example_of_fur_color_change_which_it_is_not",
+      "D": "implies_concession_or_contrast_but_the_second_point_supports_the_same_idea"
+    },
+    "explanation": "The passage lists multiple adaptations of the Arctic fox. The sentence before the blank discusses fur color, and the sentence after discusses body shape. Both are adaptations for cold, so a transition showing addition (Additionally) is appropriate. 'However' and 'Nevertheless' show contrast, and 'For instance' shows an example of the previous point.",
+    "is_ai_generated": false,
+    "tags": ["transitions"]
+  },
+  {
+    "question_id": "q_rw_009",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-10",
+    "difficulty": 3,
+    "question_text": "Which choice completes the sentence so that it conforms to the conventions of Standard English?\n\nThe committee members reviewed the proposal for three hours _______ they ultimately decided to table the discussion until the following week.",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": {
+      "A": "hours, they",
+      "B": "hours; they",
+      "C": "hours they",
+      "D": "hours, and, they"
+    },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "creates_a_comma_splice_joining_two_independent_clauses_with_only_a_comma",
+      "C": "creates_a_run_on_sentence_with_no_punctuation_between_independent_clauses",
+      "D": "uses_unnecessary_comma_after_the_conjunction_creating_awkward_punctuation"
+    },
+    "explanation": "Two independent clauses (each could stand alone as a sentence) need proper punctuation between them. A semicolon correctly joins two related independent clauses. A comma alone (A) creates a comma splice. No punctuation (C) creates a run-on. Choice D has incorrect comma placement around the conjunction.",
+    "is_ai_generated": false,
+    "tags": ["sentence_boundaries"]
+  },
+  {
+    "question_id": "q_rw_010",
+    "source": "seed_bank",
+    "section": "reading_writing",
+    "sub_skill_id": "RW-11",
+    "difficulty": 3,
+    "question_text": "Which choice completes the sentence so that it conforms to the conventions of Standard English?\n\nNeither the manager nor the employees _______ aware of the policy change before it was announced publicly.",
+    "passage_id": null,
+    "passage_text": null,
+    "answer_choices": {
+      "A": "was",
+      "B": "were",
+      "C": "is",
+      "D": "has been"
+    },
+    "correct_answer": "B",
+    "distractor_analysis": {
+      "A": "incorrectly_matches_the_verb_to_the_singular_manager_instead_of_the_closer_plural_employees",
+      "C": "uses_present_tense_when_the_sentence_requires_past_tense_and_wrong_number",
+      "D": "uses_singular_verb_form_and_present_perfect_which_does_not_match_the_past_context"
+    },
+    "explanation": "With 'neither...nor,' the verb agrees with the subject closer to it. The closer subject is 'employees' (plural), so the verb must be plural: 'were.' Additionally, the past tense is needed because the sentence describes something that happened 'before it was announced' (past).",
+    "is_ai_generated": false,
+    "tags": ["subject_verb_agreement"]
+  }
+]
