@@ -1,23 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifyAccessToken } from '@/lib/parent-auth';
-import {
-  parseQuestionsPdf,
-  parseAnswersPdf,
-  parseExplanationsPdf,
-  callClaudeStreaming,
-} from '@/lib/pdf-question-parser';
-import type { PdfType, ParsedQuestion, ParsedAnswer, ParsedExplanation } from '@/lib/pdf-question-parser';
+import { parseAnswersPdf, callClaudeStreaming } from '@/lib/pdf-question-parser';
+import type { PdfType } from '@/lib/pdf-question-parser';
 import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
 
 export const maxDuration = 300;
 
-/**
- * For questions and explanations, we stream Claude's tokens directly to the
- * client so the connection never goes idle (Vercel won't timeout a streaming
- * response as long as data flows every ~30s). For answers (small/fast), we
- * use the simpler non-streaming path.
- */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const log = (msg: string) =>
@@ -52,94 +41,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ type, data });
     }
 
-    // Questions and explanations: stream Claude tokens to keep connection alive
+    // Questions and explanations: stream Claude's raw text to client.
+    // Client will do JSON extraction/parsing. This keeps connection alive
+    // and avoids sending one huge JSON blob over SSE.
+    const promptTemplate = type === 'questions' ? 'pdf-parse-questions' : 'pdf-parse-explanations';
+    const template = loadPrompt(promptTemplate);
+    const systemPrompt = interpolatePrompt(template, { pdf_text: text });
+
+    log(`streaming Claude response for ${type}...`);
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        const send = (obj: Record<string, unknown>) => {
+        const send = (line: string) => {
           try {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)
-            );
+            controller.enqueue(encoder.encode(line + '\n'));
           } catch {
-            // controller may be closed
+            // controller closed
           }
         };
 
-        let tokenCount = 0;
-        let lastProgressTime = Date.now();
-
         try {
-          let promptTemplate: string;
-          let maxTokens: number;
-
-          if (type === 'questions') {
-            promptTemplate = 'pdf-parse-questions';
-            maxTokens = 32000;
-          } else {
-            promptTemplate = 'pdf-parse-explanations';
-            maxTokens = 32000;
-          }
-
-          const template = loadPrompt(promptTemplate);
-          const systemPrompt = interpolatePrompt(template, { pdf_text: text });
-
-          log(`streaming Claude call for ${type}...`);
-
-          const responseText = await callClaudeStreaming(
+          await callClaudeStreaming(
             type,
             systemPrompt,
-            maxTokens,
-            () => {
-              tokenCount++;
-              // Send progress every 2 seconds to keep connection alive
-              const now = Date.now();
-              if (now - lastProgressTime > 2000) {
-                send({ progress: true, tokens: tokenCount });
-                lastProgressTime = now;
-              }
+            32000,
+            (token) => {
+              // Send each token as a raw text line (not JSON — just the text)
+              send(token);
             }
           );
 
-          log(`Claude finished — ${tokenCount} tokens, parsing JSON...`);
-
-          // Extract and parse JSON from Claude's response
-          const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-          const jsonStr = jsonMatch
-            ? jsonMatch[0]
-            : responseText.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
-
-          let data: ParsedQuestion[] | ParsedExplanation[];
-
-          if (type === 'questions') {
-            const parsed = JSON.parse(jsonStr) as ParsedQuestion[];
-            data = parsed.map((q) => ({
-              module: q.module,
-              questionNumber: q.questionNumber,
-              section: (q.module?.toLowerCase().includes('math') ? 'math' : 'reading_writing') as 'math' | 'reading_writing',
-              questionText: q.questionText,
-              passageText: q.passageText || null,
-              answerChoices: q.answerChoices,
-            }));
-          } else {
-            const parsed = JSON.parse(jsonStr) as ParsedExplanation[];
-            data = parsed.map((e) => ({
-              module: e.module,
-              questionNumber: e.questionNumber,
-              explanation: e.explanation,
-              distractorAnalysis: e.distractorAnalysis || null,
-            }));
-          }
-
-          log(`parsed ${data.length} items, total time ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
-          send({ type, data });
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          log(`Claude finished, total time ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+          // Signal completion
+          send('\n__DONE__');
           controller.close();
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Internal server error';
           log(`ERROR: ${message}`);
-          send({ error: message });
+          send('\n__ERROR__:' + message);
           controller.close();
         }
       },
@@ -147,9 +88,10 @@ export async function POST(request: NextRequest) {
 
     return new Response(stream, {
       headers: {
-        'Content-Type': 'text/event-stream',
+        'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
+        'X-Parse-Type': type,
       },
     });
   } catch (error) {

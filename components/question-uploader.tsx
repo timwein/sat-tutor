@@ -147,7 +147,7 @@ async function apiCall<T>(url: string, body: unknown): Promise<T> {
   return res.json();
 }
 
-// API call for parse endpoint — handles both JSON (answers) and SSE (questions/explanations)
+// Parse API call — answers return JSON, questions/explanations stream raw text
 async function parseApiCall<T>(body: unknown): Promise<T> {
   const res = await fetch('/api/parent/upload-questions/parse', {
     method: 'POST',
@@ -170,41 +170,62 @@ async function parseApiCall<T>(body: unknown): Promise<T> {
     return res.json();
   }
 
-  // Questions/explanations return SSE with progress events + final result
+  // Questions/explanations: Claude's raw text is streamed, accumulate it all
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
-  let result: T | null = null;
-  let serverError: string | null = null;
-  let buffer = '';
+  let accumulated = '';
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-
-    // Process only complete lines (ending with \n), keep partial data in buffer
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || '';
-
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith('data: ') || trimmed === 'data: [DONE]') continue;
-      try {
-        const data = JSON.parse(trimmed.slice(6));
-        if (data.error) {
-          serverError = data.error;
-        } else if (!data.progress && !data.heartbeat) {
-          result = data as T;
-        }
-      } catch {
-        // Skip incomplete JSON from split chunks
-      }
-    }
+    accumulated += decoder.decode(value, { stream: true });
   }
 
-  if (serverError) throw new Error(serverError);
-  if (!result) throw new Error('No result received from parse API');
-  return result;
+  // Check for server error
+  if (accumulated.includes('__ERROR__:')) {
+    const errMsg = accumulated.split('__ERROR__:').pop()?.trim() || 'Server error';
+    throw new Error(errMsg);
+  }
+
+  // Remove the __DONE__ marker
+  accumulated = accumulated.replace('__DONE__', '').trim();
+
+  // Extract JSON array from Claude's response
+  const jsonMatch = accumulated.match(/\[[\s\S]*\]/);
+  if (!jsonMatch) {
+    console.error('Could not find JSON in response. First 500 chars:', accumulated.slice(0, 500));
+    throw new Error('Could not extract JSON from AI response');
+  }
+
+  const jsonStr = jsonMatch[0];
+  const type = (body as { type: string }).type as PdfType;
+
+  try {
+    if (type === 'questions') {
+      const parsed = JSON.parse(jsonStr);
+      const data = parsed.map((q: ParsedQuestion) => ({
+        module: q.module,
+        questionNumber: q.questionNumber,
+        section: (q.module?.toLowerCase().includes('math') ? 'math' : 'reading_writing') as 'math' | 'reading_writing',
+        questionText: q.questionText,
+        passageText: q.passageText || null,
+        answerChoices: q.answerChoices,
+      }));
+      return { type, data } as T;
+    } else {
+      const parsed = JSON.parse(jsonStr);
+      const data = parsed.map((e: ParsedExplanation) => ({
+        module: e.module,
+        questionNumber: e.questionNumber,
+        explanation: e.explanation,
+        distractorAnalysis: e.distractorAnalysis || null,
+      }));
+      return { type, data } as T;
+    }
+  } catch (err) {
+    console.error('JSON parse failed. JSON length:', jsonStr.length, 'Last 100 chars:', jsonStr.slice(-100));
+    throw new Error(`Failed to parse AI response: ${err instanceof Error ? err.message : err}`);
+  }
 }
 
 export function QuestionUploader({ studentId }: QuestionUploaderProps) {
