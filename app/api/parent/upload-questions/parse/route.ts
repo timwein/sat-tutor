@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        const send = (line: string) => {
+        const sendRaw = (text: string) => {
           try {
-            controller.enqueue(encoder.encode(line + '\n'));
+            controller.enqueue(encoder.encode(text));
           } catch {
             // controller closed
           }
@@ -67,20 +67,20 @@ export async function POST(request: NextRequest) {
             systemPrompt,
             32000,
             (token) => {
-              // Send each token as a raw text line (not JSON — just the text)
-              send(token);
+              // Send token exactly as Claude generated it — no extra characters
+              sendRaw(token);
             }
           );
 
           log(`Claude finished, total time ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
-          // Signal completion
-          send('\n__DONE__');
+          // Signal completion with a marker on its own line
+          sendRaw('\n__DONE__');
           controller.close();
         } catch (error) {
           const message =
             error instanceof Error ? error.message : 'Internal server error';
           log(`ERROR: ${message}`);
-          send('\n__ERROR__:' + message);
+          sendRaw('\n__ERROR__:' + message);
           controller.close();
         }
       },
