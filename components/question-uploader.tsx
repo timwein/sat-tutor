@@ -26,7 +26,7 @@ interface QuestionUploaderProps {
   studentId: string;
 }
 
-type Step = 'upload' | 'processing' | 'preview' | 'done';
+type Step = 'upload' | 'review_types' | 'processing' | 'preview' | 'done';
 
 const SKILL_NAMES: Record<string, string> = {
   'RW-01': 'Central Ideas & Details',
@@ -233,6 +233,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     warnings: string[];
   } | null>(null);
   const [insertedCount, setInsertedCount] = useState(0);
+  const [pdfTexts, setPdfTexts] = useState<{ name: string; text: string; type: PdfType }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
@@ -248,7 +249,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function handleUpload() {
+  async function handleExtractText() {
     if (!testLabel.trim()) { setError('Please enter a test label'); return; }
     if (files.length < 2) { setError('Please upload at least 2 PDF files (questions + answers)'); return; }
 
@@ -256,16 +257,31 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     setStep('processing');
 
     try {
-      // Step 1: Extract text from PDFs in the browser
-      const pdfTexts: { name: string; text: string; type: PdfType }[] = [];
+      const extracted: { name: string; text: string; type: PdfType }[] = [];
       for (const file of files) {
         setProcessingStatus(`Extracting text from ${file.name}...`);
         const { extractTextFromPdfClient } = await import('@/lib/pdf-extract-client');
         const text = await extractTextFromPdfClient(file);
         const type = detectPdfType(text);
-        pdfTexts.push({ name: file.name, text, type });
+        extracted.push({ name: file.name, text, type });
       }
+      setPdfTexts(extracted);
+      setStep('review_types');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to extract text');
+      setStep('upload');
+    }
+  }
 
+  function updatePdfType(index: number, newType: PdfType) {
+    setPdfTexts((prev) => prev.map((p, i) => i === index ? { ...p, type: newType } : p));
+  }
+
+  async function handleProcess() {
+    setError(null);
+    setStep('processing');
+
+    try {
       // Validate
       const questionsTexts = pdfTexts.filter((p) => p.type === 'questions');
       const answersTexts = pdfTexts.filter((p) => p.type === 'answers');
@@ -394,6 +410,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     setQuestions([]);
     setSummary(null);
     setInsertedCount(0);
+    setPdfTexts([]);
   }
 
   // Step 1: Upload
@@ -465,12 +482,53 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
               </div>
             )}
 
-            <Button onClick={handleUpload} disabled={files.length < 2 || !testLabel.trim()} className="w-full">
+            <Button onClick={handleExtractText} disabled={files.length < 2 || !testLabel.trim()} className="w-full">
               Upload & Process
             </Button>
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  // Step 1b: Review detected PDF types
+  if (step === 'review_types') {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Confirm PDF Types</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Verify each file is correctly identified. Change the type if needed.
+          </p>
+          {pdfTexts.map((pdf, i) => (
+            <div key={pdf.name} className="flex items-center gap-3 rounded-lg border px-3 py-2">
+              <FileText className="h-4 w-4 shrink-0 text-red-500" />
+              <span className="flex-1 truncate text-sm">{pdf.name}</span>
+              <select
+                value={pdf.type}
+                onChange={(e) => updatePdfType(i, e.target.value as PdfType)}
+                className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+              >
+                <option value="questions">Questions</option>
+                <option value="answers">Answers</option>
+                <option value="explanations">Explanations</option>
+              </select>
+            </div>
+          ))}
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => { setStep('upload'); setPdfTexts([]); }} className="flex-1">Back</Button>
+            <Button onClick={handleProcess} className="flex-1">Process PDFs</Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
