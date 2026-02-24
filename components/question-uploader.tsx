@@ -167,23 +167,26 @@ async function parseApiCall<T>(body: unknown): Promise<T> {
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let result: T | null = null;
+  let buffer = '';
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
-    const chunk = decoder.decode(value);
-    const lines = chunk.split('\n');
+    buffer += decoder.decode(value, { stream: true });
+
+    // Process only complete lines (ending with \n), keep partial data in buffer
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || ''; // last element is incomplete or empty
+
     for (const line of lines) {
-      if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
         try {
-          const data = JSON.parse(line.slice(6));
+          const data = JSON.parse(trimmed.slice(6));
           if (data.error) throw new Error(data.error);
           if (!data.heartbeat) result = data as T;
-        } catch (e) {
-          // Skip malformed JSON (partial chunks)
-          if (e instanceof Error && e.message !== 'Unexpected end of JSON input' && !e.message.includes('Unterminated')) {
-            throw e;
-          }
+        } catch {
+          // Skip malformed JSON — partial data from split chunks
         }
       }
     }
