@@ -61,6 +61,26 @@ const SKILL_NAMES: Record<string, string> = {
   'M-19': 'Circles',
 };
 
+// Client-side module splitting to keep each API call small
+function splitTextByModule(pdfText: string): string[] {
+  const modulePattern = /(?:^|\n)(.{0,50}(?:Module\s*[12]|MODULE\s*[12]).{0,50})(?:\n|$)/gi;
+  const matches = [...pdfText.matchAll(modulePattern)];
+
+  if (matches.length < 2) return [pdfText];
+
+  const chunks: string[] = [];
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].index!;
+    const end = i + 1 < matches.length ? matches[i + 1].index! : pdfText.length;
+    const chunkText = pdfText.slice(start, end);
+    if (chunkText.length > 500) {
+      chunks.push(chunkText);
+    }
+  }
+
+  return chunks.length > 0 ? chunks : [pdfText];
+}
+
 // Client-side PDF type detection (same logic as server)
 function detectPdfType(text: string): PdfType {
   const first2000 = text.slice(0, 2000).toLowerCase();
@@ -186,15 +206,20 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
         throw new Error('Could not detect an answers PDF. Detected: ' + pdfTexts.map(p => `${p.name} → ${p.type}`).join(', '));
       }
 
-      // Step 2: Parse each PDF type with Claude (separate API calls)
-      setProcessingStatus('Parsing questions PDF with AI... (1/3)');
+      // Step 2: Parse each PDF type with Claude (one API call per module chunk)
       const questionsText = questionsTexts.map((p) => p.text).join('\n\n---NEW PDF---\n\n');
-      const qResult = await apiCall<{ data: ParsedQuestion[] }>(
-        '/api/parent/upload-questions/parse',
-        { type: 'questions', text: questionsText }
-      );
+      const questionChunks = splitTextByModule(questionsText);
+      const allParsedQuestions: ParsedQuestion[] = [];
+      for (let i = 0; i < questionChunks.length; i++) {
+        setProcessingStatus(`Parsing questions with AI (module ${i + 1}/${questionChunks.length})...`);
+        const qResult = await apiCall<{ data: ParsedQuestion[] }>(
+          '/api/parent/upload-questions/parse',
+          { type: 'questions', text: questionChunks[i] }
+        );
+        allParsedQuestions.push(...qResult.data);
+      }
 
-      setProcessingStatus('Parsing answers PDF with AI... (2/3)');
+      setProcessingStatus('Parsing answers PDF with AI...');
       const answersText = answersTexts.map((p) => p.text).join('\n\n');
       const aResult = await apiCall<{ data: ParsedAnswer[] }>(
         '/api/parent/upload-questions/parse',
@@ -204,13 +229,16 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       let parsedExplanations: ParsedExplanation[] = [];
       const warnings: string[] = [];
       if (explanationsTexts.length > 0) {
-        setProcessingStatus('Parsing explanations PDF with AI... (3/3)');
         const explanationsText = explanationsTexts.map((p) => p.text).join('\n\n');
-        const eResult = await apiCall<{ data: ParsedExplanation[] }>(
-          '/api/parent/upload-questions/parse',
-          { type: 'explanations', text: explanationsText }
-        );
-        parsedExplanations = eResult.data;
+        const explanationChunks = splitTextByModule(explanationsText);
+        for (let i = 0; i < explanationChunks.length; i++) {
+          setProcessingStatus(`Parsing explanations with AI (module ${i + 1}/${explanationChunks.length})...`);
+          const eResult = await apiCall<{ data: ParsedExplanation[] }>(
+            '/api/parent/upload-questions/parse',
+            { type: 'explanations', text: explanationChunks[i] }
+          );
+          parsedExplanations.push(...eResult.data);
+        }
       } else {
         warnings.push('No explanations PDF detected — questions will have no explanations.');
       }
@@ -218,7 +246,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       // Step 3: Deterministic match (runs in browser, instant)
       setProcessingStatus('Matching questions with answers...');
       const { merged, warnings: matchWarnings } = matchAndMerge(
-        qResult.data,
+        allParsedQuestions,
         aResult.data,
         parsedExplanations
       );
@@ -254,7 +282,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
 
       setQuestions(classified);
       setSummary({
-        total: qResult.data.length,
+        total: allParsedQuestions.length,
         matched: merged.length,
         classified: classified.length,
         warnings,
