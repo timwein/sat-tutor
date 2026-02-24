@@ -147,6 +147,52 @@ async function apiCall<T>(url: string, body: unknown): Promise<T> {
   return res.json();
 }
 
+// SSE-based API call for parse endpoint (heartbeats prevent gateway timeout)
+async function parseApiCall<T>(body: unknown): Promise<T> {
+  const res = await fetch('/api/parent/upload-questions/parse', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const ct = res.headers.get('content-type') || '';
+    let msg = `Server error (${res.status})`;
+    if (ct.includes('application/json')) {
+      const data = await res.json();
+      msg = data.error || msg;
+    }
+    throw new Error(msg);
+  }
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let result: T | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value);
+    const lines = chunk.split('\n');
+    for (const line of lines) {
+      if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+        try {
+          const data = JSON.parse(line.slice(6));
+          if (data.error) throw new Error(data.error);
+          if (!data.heartbeat) result = data as T;
+        } catch (e) {
+          // Skip malformed JSON (partial chunks)
+          if (e instanceof Error && e.message !== 'Unexpected end of JSON input' && !e.message.includes('Unterminated')) {
+            throw e;
+          }
+        }
+      }
+    }
+  }
+
+  if (!result) throw new Error('No result received from parse API');
+  return result;
+}
+
 export function QuestionUploader({ studentId }: QuestionUploaderProps) {
   const [step, setStep] = useState<Step>('upload');
   const [testLabel, setTestLabel] = useState('');
@@ -212,8 +258,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       const allParsedQuestions: ParsedQuestion[] = [];
       for (let i = 0; i < questionChunks.length; i++) {
         setProcessingStatus(`Parsing questions with AI (module ${i + 1}/${questionChunks.length})...`);
-        const qResult = await apiCall<{ data: ParsedQuestion[] }>(
-          '/api/parent/upload-questions/parse',
+        const qResult = await parseApiCall<{ data: ParsedQuestion[] }>(
           { type: 'questions', text: questionChunks[i] }
         );
         allParsedQuestions.push(...qResult.data);
@@ -221,8 +266,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
 
       setProcessingStatus('Parsing answers PDF with AI...');
       const answersText = answersTexts.map((p) => p.text).join('\n\n');
-      const aResult = await apiCall<{ data: ParsedAnswer[] }>(
-        '/api/parent/upload-questions/parse',
+      const aResult = await parseApiCall<{ data: ParsedAnswer[] }>(
         { type: 'answers', text: answersText }
       );
 
@@ -233,8 +277,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
         const explanationChunks = splitTextByModule(explanationsText);
         for (let i = 0; i < explanationChunks.length; i++) {
           setProcessingStatus(`Parsing explanations with AI (module ${i + 1}/${explanationChunks.length})...`);
-          const eResult = await apiCall<{ data: ParsedExplanation[] }>(
-            '/api/parent/upload-questions/parse',
+          const eResult = await parseApiCall<{ data: ParsedExplanation[] }>(
             { type: 'explanations', text: explanationChunks[i] }
           );
           parsedExplanations.push(...eResult.data);

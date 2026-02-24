@@ -125,7 +125,10 @@ function extractJsonFromResponse(text: string): string {
   return cleaned;
 }
 
-async function callClaude(systemPrompt: string, maxTokens: number): Promise<string> {
+async function callClaude(label: string, systemPrompt: string, maxTokens: number): Promise<string> {
+  const start = Date.now();
+  console.log(`[callClaude] ${label} starting — promptLength=${systemPrompt.length} maxTokens=${maxTokens}`);
+
   const stream = anthropic.messages.stream({
     model: MODELS.SONNET,
     max_tokens: maxTokens,
@@ -134,7 +137,10 @@ async function callClaude(systemPrompt: string, maxTokens: number): Promise<stri
   });
 
   const response = await stream.finalMessage();
-  return response.content[0].type === 'text' ? response.content[0].text : '';
+  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  const elapsed = ((Date.now() - start) / 1000).toFixed(1);
+  console.log(`[callClaude] ${label} done in ${elapsed}s — responseLength=${text.length} inputTokens=${response.usage.input_tokens} outputTokens=${response.usage.output_tokens}`);
+  return text;
 }
 
 /**
@@ -168,23 +174,23 @@ function splitTextByModule(pdfText: string): { label: string; text: string }[] {
 
 export async function parseQuestionsPdf(pdfText: string): Promise<ParsedQuestion[]> {
   const chunks = splitTextByModule(pdfText);
+  console.log(`[parseQuestionsPdf] textLength=${pdfText.length} chunks=${chunks.length} labels=[${chunks.map(c => c.label).join(', ')}]`);
 
   if (chunks.length > 1) {
-    // Parse all module chunks in parallel to stay within timeout limits
     const results = await Promise.all(
-      chunks.map((chunk) => parseSingleQuestionsChunk(chunk.text))
+      chunks.map((chunk, i) => parseSingleQuestionsChunk(chunk.text, `questions-chunk${i+1}(${chunk.label})`))
     );
     return results.flat();
   }
 
-  return parseSingleQuestionsChunk(pdfText);
+  return parseSingleQuestionsChunk(pdfText, 'questions-all');
 }
 
-async function parseSingleQuestionsChunk(pdfText: string): Promise<ParsedQuestion[]> {
+async function parseSingleQuestionsChunk(pdfText: string, label: string): Promise<ParsedQuestion[]> {
   const template = loadPrompt('pdf-parse-questions');
   const systemPrompt = interpolatePrompt(template, { pdf_text: pdfText });
 
-  const responseText = await callClaude(systemPrompt, 32000);
+  const responseText = await callClaude(label, systemPrompt, 32000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
@@ -204,10 +210,11 @@ async function parseSingleQuestionsChunk(pdfText: string): Promise<ParsedQuestio
 }
 
 export async function parseAnswersPdf(pdfText: string): Promise<ParsedAnswer[]> {
+  console.log(`[parseAnswersPdf] textLength=${pdfText.length}`);
   const template = loadPrompt('pdf-parse-answers');
   const systemPrompt = interpolatePrompt(template, { pdf_text: pdfText });
 
-  const responseText = await callClaude(systemPrompt, 4000);
+  const responseText = await callClaude('answers', systemPrompt, 4000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
@@ -224,22 +231,23 @@ export async function parseAnswersPdf(pdfText: string): Promise<ParsedAnswer[]> 
 
 export async function parseExplanationsPdf(pdfText: string): Promise<ParsedExplanation[]> {
   const chunks = splitTextByModule(pdfText);
+  console.log(`[parseExplanationsPdf] textLength=${pdfText.length} chunks=${chunks.length} labels=[${chunks.map(c => c.label).join(', ')}]`);
 
   if (chunks.length > 1) {
     const results = await Promise.all(
-      chunks.map((chunk) => parseSingleExplanationsChunk(chunk.text))
+      chunks.map((chunk, i) => parseSingleExplanationsChunk(chunk.text, `explanations-chunk${i+1}(${chunk.label})`))
     );
     return results.flat();
   }
 
-  return parseSingleExplanationsChunk(pdfText);
+  return parseSingleExplanationsChunk(pdfText, 'explanations-all');
 }
 
-async function parseSingleExplanationsChunk(pdfText: string): Promise<ParsedExplanation[]> {
+async function parseSingleExplanationsChunk(pdfText: string, label: string): Promise<ParsedExplanation[]> {
   const template = loadPrompt('pdf-parse-explanations');
   const systemPrompt = interpolatePrompt(template, { pdf_text: pdfText });
 
-  const responseText = await callClaude(systemPrompt, 32000);
+  const responseText = await callClaude(label, systemPrompt, 32000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
@@ -355,7 +363,7 @@ export async function classifyBatch(
     questions_json: JSON.stringify(questionsForClaude, null, 2),
   });
 
-  const responseText = await callClaude(systemPrompt, 2000);
+  const responseText = await callClaude(`classify-batch(${batch.length})`, systemPrompt, 2000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
