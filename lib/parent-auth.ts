@@ -95,7 +95,7 @@ function hmacSign(payload: string): string {
 export function generateAccessToken(studentId: string): string {
   const payload = JSON.stringify({
     studentId,
-    exp: Date.now() + 30 * 60 * 1000, // 30 minutes
+    exp: Date.now() + 4 * 60 * 60 * 1000, // 4 hours
   });
   const encoded = Buffer.from(payload).toString('base64');
   const signature = hmacSign(encoded);
