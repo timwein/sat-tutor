@@ -19,12 +19,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { type, text } = (await request.json()) as {
+    const { type, text, moduleFilter } = (await request.json()) as {
       type: PdfType;
       text: string;
+      moduleFilter?: string;
     };
 
-    log(`type=${type} textLength=${text?.length ?? 0}`);
+    log(`type=${type} textLength=${text?.length ?? 0} moduleFilter=${moduleFilter ?? 'none'}`);
 
     if (!type || !text) {
       return NextResponse.json(
@@ -41,21 +42,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ type, data });
     }
 
-    // Questions and explanations: stream Claude's raw text to client.
-    // Client will do JSON extraction/parsing. This keeps connection alive
-    // and avoids sending one huge JSON blob over SSE.
+    // Questions and explanations: stream Claude's raw text to client
     const promptTemplate = type === 'questions' ? 'pdf-parse-questions' : 'pdf-parse-explanations';
     const template = loadPrompt(promptTemplate);
-    const systemPrompt = interpolatePrompt(template, { pdf_text: text });
 
-    log(`streaming Claude response for ${type}...`);
+    // Add module filter instruction if specified
+    let extraInstruction = '';
+    if (moduleFilter) {
+      extraInstruction = `\n\nIMPORTANT: Extract ONLY the questions from "${moduleFilter}". Skip ALL questions from other modules. Output only the JSON array for this one module.`;
+    }
+
+    const systemPrompt = interpolatePrompt(template, { pdf_text: text }) + extraInstruction;
+
+    log(`streaming Claude response for ${type} (${moduleFilter ?? 'all'})...`);
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        const sendRaw = (text: string) => {
+        const sendRaw = (rawText: string) => {
           try {
-            controller.enqueue(encoder.encode(text));
+            controller.enqueue(encoder.encode(rawText));
           } catch {
             // controller closed
           }
@@ -63,17 +69,15 @@ export async function POST(request: NextRequest) {
 
         try {
           await callClaudeStreaming(
-            type,
+            `${type}${moduleFilter ? `-${moduleFilter}` : ''}`,
             systemPrompt,
-            128000,
-            (token) => {
-              // Send token exactly as Claude generated it — no extra characters
-              sendRaw(token);
+            16000,
+            (streamToken) => {
+              sendRaw(streamToken);
             }
           );
 
           log(`Claude finished, total time ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
-          // Signal completion with a marker on its own line
           sendRaw('\n__DONE__');
           controller.close();
         } catch (error) {
@@ -91,7 +95,6 @@ export async function POST(request: NextRequest) {
         'Content-Type': 'text/plain; charset=utf-8',
         'Cache-Control': 'no-cache',
         Connection: 'keep-alive',
-        'X-Parse-Type': type,
       },
     });
   } catch (error) {

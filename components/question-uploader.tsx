@@ -61,26 +61,6 @@ const SKILL_NAMES: Record<string, string> = {
   'M-19': 'Circles',
 };
 
-// Client-side module splitting to keep each API call small
-function splitTextByModule(pdfText: string): string[] {
-  const modulePattern = /(?:^|\n)(.{0,50}(?:Module\s*[12]|MODULE\s*[12]).{0,50})(?:\n|$)/gi;
-  const matches = [...pdfText.matchAll(modulePattern)];
-
-  if (matches.length < 2) return [pdfText];
-
-  const chunks: string[] = [];
-  for (let i = 0; i < matches.length; i++) {
-    const start = matches[i].index!;
-    const end = i + 1 < matches.length ? matches[i + 1].index! : pdfText.length;
-    const chunkText = pdfText.slice(start, end);
-    if (chunkText.length > 500) {
-      chunks.push(chunkText);
-    }
-  }
-
-  return chunks.length > 0 ? chunks : [pdfText];
-}
-
 // Client-side PDF type detection (same logic as server)
 function detectPdfType(text: string): PdfType {
   const first2000 = text.slice(0, 2000).toLowerCase();
@@ -287,14 +267,21 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
         throw new Error('Could not detect an answers PDF. Detected: ' + pdfTexts.map(p => `${p.name} → ${p.type}`).join(', '));
       }
 
-      // Step 2: Parse each PDF type with Claude (one API call per module chunk)
+      // Step 2: Parse each PDF type with Claude
+      // Split into 4 calls by module to stay within Claude's output token limit
+      const SAT_MODULES = [
+        'Reading and Writing Module 1',
+        'Reading and Writing Module 2',
+        'Math Module 1',
+        'Math Module 2',
+      ];
+
       const questionsText = questionsTexts.map((p) => p.text).join('\n\n---NEW PDF---\n\n');
-      const questionChunks = splitTextByModule(questionsText);
       const allParsedQuestions: ParsedQuestion[] = [];
-      for (let i = 0; i < questionChunks.length; i++) {
-        setProcessingStatus(`Parsing questions with AI (module ${i + 1}/${questionChunks.length})...`);
+      for (let i = 0; i < SAT_MODULES.length; i++) {
+        setProcessingStatus(`Parsing questions: ${SAT_MODULES[i]} (${i + 1}/4)...`);
         const qResult = await parseApiCall<{ data: ParsedQuestion[] }>(
-          { type: 'questions', text: questionChunks[i] }
+          { type: 'questions', text: questionsText, moduleFilter: SAT_MODULES[i] }
         );
         allParsedQuestions.push(...qResult.data);
       }
@@ -309,11 +296,10 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       const warnings: string[] = [];
       if (explanationsTexts.length > 0) {
         const explanationsText = explanationsTexts.map((p) => p.text).join('\n\n');
-        const explanationChunks = splitTextByModule(explanationsText);
-        for (let i = 0; i < explanationChunks.length; i++) {
-          setProcessingStatus(`Parsing explanations with AI (module ${i + 1}/${explanationChunks.length})...`);
+        for (let i = 0; i < SAT_MODULES.length; i++) {
+          setProcessingStatus(`Parsing explanations: ${SAT_MODULES[i]} (${i + 1}/4)...`);
           const eResult = await parseApiCall<{ data: ParsedExplanation[] }>(
-            { type: 'explanations', text: explanationChunks[i] }
+            { type: 'explanations', text: explanationsText, moduleFilter: SAT_MODULES[i] }
           );
           parsedExplanations.push(...eResult.data);
         }
