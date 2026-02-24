@@ -69,36 +69,36 @@ export async function extractTextFromPdf(buffer: Buffer): Promise<string> {
 // ============================================
 
 export function detectPdfType(text: string): PdfType {
-  const first2000 = text.slice(0, 2000).toLowerCase();
+  const lower = text.toLowerCase();
+  const first5000 = lower.slice(0, 5000);
 
   // Answer key: dense pattern of question numbers with single-letter answers
   const answerPattern = /(?:correct answer|answer[:\s]|^[\s]*\d+[\.\)]\s*[abcd]\s*$)/gim;
-  const answerMatches = first2000.match(answerPattern);
+  const answerMatches = first5000.match(answerPattern);
   if (answerMatches && answerMatches.length >= 5) {
     return 'answers';
   }
 
   // Check for answer key table patterns (Number | Domain | Skill | Answer)
   if (
-    first2000.includes('answer') &&
-    first2000.includes('domain') &&
-    first2000.includes('skill')
+    first5000.includes('answer') &&
+    first5000.includes('domain') &&
+    first5000.includes('skill')
   ) {
     return 'answers';
   }
 
-  // Explanations: contain rationale/explanation keywords
+  // Explanations: check a larger portion since keywords may appear later
+  const first20000 = lower.slice(0, 20000);
   const explanationKeywords = [
-    'rationale',
-    'explanation',
-    'choice a is',
-    'choice b is',
-    'the correct answer is',
-    'this is correct because',
-    'is the best answer',
+    'rationale', 'explanation', 'choice a is', 'choice b is',
+    'choice c is', 'choice d is', 'the correct answer is',
+    'this is correct because', 'is the best answer',
+    'is incorrect because', 'is correct because',
+    'correct answer:', 'distractor', 'key/rationale',
   ];
   const explanationHits = explanationKeywords.filter((kw) =>
-    first2000.includes(kw)
+    first20000.includes(kw)
   ).length;
   if (explanationHits >= 2) {
     return 'explanations';
