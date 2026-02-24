@@ -16,6 +16,7 @@ import { ParentOverview } from './parent-overview';
 import { ParentDetailedView } from './parent-detailed-view';
 import { ParentAlerts } from './parent-alerts';
 import { QuestionUploader } from './question-uploader';
+import { QuestionBankOverview } from './question-bank-overview';
 import type { ParentDashboardData } from '@/lib/parent-dashboard';
 
 interface ParentDashboardShellProps {
@@ -239,7 +240,8 @@ export function ParentDashboardShell({
         />
       </TabsContent>
 
-      <TabsContent value="questions">
+      <TabsContent value="questions" className="space-y-6">
+        <QuestionBankOverview />
         <QuestionUploader studentId={studentId} />
       </TabsContent>
     </Tabs>
