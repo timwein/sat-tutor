@@ -147,7 +147,7 @@ async function apiCall<T>(url: string, body: unknown): Promise<T> {
   return res.json();
 }
 
-// SSE-based API call for parse endpoint (heartbeats prevent gateway timeout)
+// API call for parse endpoint — handles both JSON (answers) and SSE (questions/explanations)
 async function parseApiCall<T>(body: unknown): Promise<T> {
   const res = await fetch('/api/parent/upload-questions/parse', {
     method: 'POST',
@@ -164,9 +164,17 @@ async function parseApiCall<T>(body: unknown): Promise<T> {
     throw new Error(msg);
   }
 
+  // Answers return plain JSON
+  const ct = res.headers.get('content-type') || '';
+  if (ct.includes('application/json')) {
+    return res.json();
+  }
+
+  // Questions/explanations return SSE with progress events + final result
   const reader = res.body!.getReader();
   const decoder = new TextDecoder();
   let result: T | null = null;
+  let serverError: string | null = null;
   let buffer = '';
 
   while (true) {
@@ -176,22 +184,25 @@ async function parseApiCall<T>(body: unknown): Promise<T> {
 
     // Process only complete lines (ending with \n), keep partial data in buffer
     const lines = buffer.split('\n');
-    buffer = lines.pop() || ''; // last element is incomplete or empty
+    buffer = lines.pop() || '';
 
     for (const line of lines) {
       const trimmed = line.trim();
-      if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
-        try {
-          const data = JSON.parse(trimmed.slice(6));
-          if (data.error) throw new Error(data.error);
-          if (!data.heartbeat) result = data as T;
-        } catch {
-          // Skip malformed JSON — partial data from split chunks
+      if (!trimmed.startsWith('data: ') || trimmed === 'data: [DONE]') continue;
+      try {
+        const data = JSON.parse(trimmed.slice(6));
+        if (data.error) {
+          serverError = data.error;
+        } else if (!data.progress && !data.heartbeat) {
+          result = data as T;
         }
+      } catch {
+        // Skip incomplete JSON from split chunks
       }
     }
   }
 
+  if (serverError) throw new Error(serverError);
   if (!result) throw new Error('No result received from parse API');
   return result;
 }

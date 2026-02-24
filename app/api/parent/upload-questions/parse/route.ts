@@ -5,11 +5,19 @@ import {
   parseQuestionsPdf,
   parseAnswersPdf,
   parseExplanationsPdf,
+  callClaudeStreaming,
 } from '@/lib/pdf-question-parser';
-import type { PdfType } from '@/lib/pdf-question-parser';
+import type { PdfType, ParsedQuestion, ParsedAnswer, ParsedExplanation } from '@/lib/pdf-question-parser';
+import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
 
 export const maxDuration = 300;
 
+/**
+ * For questions and explanations, we stream Claude's tokens directly to the
+ * client so the connection never goes idle (Vercel won't timeout a streaming
+ * response as long as data flows every ~30s). For answers (small/fast), we
+ * use the simpler non-streaming path.
+ */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   const log = (msg: string) =>
@@ -36,62 +44,102 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use SSE streaming with heartbeats to prevent gateway timeout
+    // Answers are small/fast — use simple JSON response
+    if (type === 'answers') {
+      log('calling parseAnswersPdf...');
+      const data = await parseAnswersPdf(text);
+      log(`parseAnswersPdf returned ${data.length} answers`);
+      return NextResponse.json({ type, data });
+    }
+
+    // Questions and explanations: stream Claude tokens to keep connection alive
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
-        // Send heartbeat every 10s to keep connection alive
-        const heartbeat = setInterval(() => {
+        const send = (obj: Record<string, unknown>) => {
           try {
             controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ heartbeat: true })}\n\n`)
+              encoder.encode(`data: ${JSON.stringify(obj)}\n\n`)
             );
-            log('heartbeat sent');
           } catch {
             // controller may be closed
           }
-        }, 10000);
+        };
+
+        let tokenCount = 0;
+        let lastProgressTime = Date.now();
 
         try {
-          let data;
+          let promptTemplate: string;
+          let maxTokens: number;
+
           if (type === 'questions') {
-            log('calling parseQuestionsPdf...');
-            data = await parseQuestionsPdf(text);
-            log(`parseQuestionsPdf returned ${data.length} questions`);
-          } else if (type === 'answers') {
-            log('calling parseAnswersPdf...');
-            data = await parseAnswersPdf(text);
-            log(`parseAnswersPdf returned ${data.length} answers`);
-          } else if (type === 'explanations') {
-            log('calling parseExplanationsPdf...');
-            data = await parseExplanationsPdf(text);
-            log(`parseExplanationsPdf returned ${data.length} explanations`);
+            promptTemplate = 'pdf-parse-questions';
+            maxTokens = 32000;
           } else {
-            clearInterval(heartbeat);
-            controller.enqueue(
-              encoder.encode(
-                `data: ${JSON.stringify({ error: `Unknown PDF type: ${type}` })}\n\n`
-              )
-            );
-            controller.close();
-            return;
+            promptTemplate = 'pdf-parse-explanations';
+            maxTokens = 32000;
           }
 
-          clearInterval(heartbeat);
-          log(`sending result, total time ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type, data })}\n\n`)
+          const template = loadPrompt(promptTemplate);
+          const systemPrompt = interpolatePrompt(template, { pdf_text: text });
+
+          log(`streaming Claude call for ${type}...`);
+
+          const responseText = await callClaudeStreaming(
+            type,
+            systemPrompt,
+            maxTokens,
+            () => {
+              tokenCount++;
+              // Send progress every 2 seconds to keep connection alive
+              const now = Date.now();
+              if (now - lastProgressTime > 2000) {
+                send({ progress: true, tokens: tokenCount });
+                lastProgressTime = now;
+              }
+            }
           );
+
+          log(`Claude finished — ${tokenCount} tokens, parsing JSON...`);
+
+          // Extract and parse JSON from Claude's response
+          const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+          const jsonStr = jsonMatch
+            ? jsonMatch[0]
+            : responseText.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+
+          let data: ParsedQuestion[] | ParsedExplanation[];
+
+          if (type === 'questions') {
+            const parsed = JSON.parse(jsonStr) as ParsedQuestion[];
+            data = parsed.map((q) => ({
+              module: q.module,
+              questionNumber: q.questionNumber,
+              section: (q.module?.toLowerCase().includes('math') ? 'math' : 'reading_writing') as 'math' | 'reading_writing',
+              questionText: q.questionText,
+              passageText: q.passageText || null,
+              answerChoices: q.answerChoices,
+            }));
+          } else {
+            const parsed = JSON.parse(jsonStr) as ParsedExplanation[];
+            data = parsed.map((e) => ({
+              module: e.module,
+              questionNumber: e.questionNumber,
+              explanation: e.explanation,
+              distractorAnalysis: e.distractorAnalysis || null,
+            }));
+          }
+
+          log(`parsed ${data.length} items, total time ${((Date.now() - startTime) / 1000).toFixed(1)}s`);
+          send({ type, data });
           controller.enqueue(encoder.encode('data: [DONE]\n\n'));
           controller.close();
         } catch (error) {
-          clearInterval(heartbeat);
           const message =
             error instanceof Error ? error.message : 'Internal server error';
           log(`ERROR: ${message}`);
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: message })}\n\n`)
-          );
+          send({ error: message });
           controller.close();
         }
       },

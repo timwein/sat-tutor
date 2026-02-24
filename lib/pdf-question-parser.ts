@@ -126,6 +126,19 @@ function extractJsonFromResponse(text: string): string {
 }
 
 async function callClaude(label: string, systemPrompt: string, maxTokens: number): Promise<string> {
+  return callClaudeStreaming(label, systemPrompt, maxTokens);
+}
+
+/**
+ * Stream Claude's response, calling onToken for each text delta.
+ * Returns the full accumulated text when done.
+ */
+export async function callClaudeStreaming(
+  label: string,
+  systemPrompt: string,
+  maxTokens: number,
+  onToken?: (token: string) => void
+): Promise<string> {
   const start = Date.now();
   console.log(`[callClaude] ${label} starting — promptLength=${systemPrompt.length} maxTokens=${maxTokens}`);
 
@@ -136,11 +149,16 @@ async function callClaude(label: string, systemPrompt: string, maxTokens: number
     messages: [{ role: 'user', content: 'Extract the structured data now. Return ONLY the JSON array.' }],
   });
 
+  let accumulated = '';
+  stream.on('text', (text) => {
+    accumulated += text;
+    if (onToken) onToken(text);
+  });
+
   const response = await stream.finalMessage();
-  const text = response.content[0].type === 'text' ? response.content[0].text : '';
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  console.log(`[callClaude] ${label} done in ${elapsed}s — responseLength=${text.length} inputTokens=${response.usage.input_tokens} outputTokens=${response.usage.output_tokens}`);
-  return text;
+  console.log(`[callClaude] ${label} done in ${elapsed}s — responseLength=${accumulated.length} inputTokens=${response.usage.input_tokens} outputTokens=${response.usage.output_tokens}`);
+  return accumulated;
 }
 
 /**
