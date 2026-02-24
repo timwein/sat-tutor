@@ -157,7 +157,7 @@ export async function callClaudeStreaming(
 
   const response = await stream.finalMessage();
   const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-  console.log(`[callClaude] ${label} done in ${elapsed}s — responseLength=${accumulated.length} inputTokens=${response.usage.input_tokens} outputTokens=${response.usage.output_tokens}`);
+  console.log(`[callClaude] ${label} done in ${elapsed}s — responseLength=${accumulated.length} stopReason=${response.stop_reason} inputTokens=${response.usage.input_tokens} outputTokens=${response.usage.output_tokens}`);
   return accumulated;
 }
 

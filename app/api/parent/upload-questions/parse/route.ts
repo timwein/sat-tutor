@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
           await callClaudeStreaming(
             type,
             systemPrompt,
-            32000,
+            128000,
             (token) => {
               // Send token exactly as Claude generated it — no extra characters
               sendRaw(token);
