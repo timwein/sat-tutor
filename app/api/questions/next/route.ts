@@ -24,13 +24,14 @@ function stripToSafeQuestion(q: Question): SafeQuestion {
     passage_text: q.passage_text,
     answer_choices: q.answer_choices,
     tags: q.tags,
+    is_ai_generated: q.is_ai_generated,
   };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { session_id, student_id } = body;
+    const { session_id, student_id, prefer_strength } = body;
 
     if (!session_id || !student_id) {
       return NextResponse.json(
@@ -139,6 +140,23 @@ export async function POST(request: NextRequest) {
     }));
     const frustrationState = detectFrustration(attemptSignals);
 
+    // Record frustration signals on the session (non-fatal if it fails)
+    if (frustrationState.isFrustrated) {
+      const existingSignals = Array.isArray(typedSession.mood_signals)
+        ? typedSession.mood_signals
+        : [];
+      const entry = {
+        at: new Date().toISOString(),
+        consecutive_wrong: frustrationState.consecutiveWrong,
+        signals: frustrationState.signals,
+        recommendation: frustrationState.recommendation,
+      };
+      await supabase
+        .from('sessions')
+        .update({ mood_signals: [...existingSignals.slice(-19), entry] })
+        .eq('id', session_id);
+    }
+
     // Check if session is complete
     if (isSessionComplete(typedSession.questions_answered, elapsedMinutes, config)) {
       return NextResponse.json({
@@ -199,12 +217,22 @@ export async function POST(request: NextRequest) {
 
     // Load a lightweight view of the bank for selection (no passages), then
     // fetch the chosen question in full. Keeps payloads small as the bank grows.
+    let subSkillFocus = (session as Record<string, unknown>).sub_skill_focus as
+      | string
+      | undefined;
+
+    // "Switch to easier questions": serve from the student's strongest
+    // calibrated skill for a few questions to rebuild confidence.
+    if (prefer_strength === true && typedRatings.length > 0) {
+      const strongest = [...typedRatings]
+        .filter((r) => r.is_calibrated)
+        .sort((a, b) => b.elo_rating - a.elo_rating)[0];
+      if (strongest) subSkillFocus = strongest.sub_skill_id;
+    }
+
     let lightQuery = supabase
       .from('questions')
       .select('id, question_id, sub_skill_id, difficulty, section');
-    const subSkillFocus = (session as Record<string, unknown>).sub_skill_focus as
-      | string
-      | undefined;
     if (subSkillFocus) {
       lightQuery = lightQuery.eq('sub_skill_id', subSkillFocus);
     }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { calculateEloAdjustment, getMasteryLevel } from '@/lib/elo';
-import { classifyError } from '@/lib/claude';
+
 import { detectFrustration } from '@/lib/frustration-detector';
 import { getNextInterval, getNextReviewDate } from '@/lib/spaced-repetition';
 import type {
@@ -12,7 +12,7 @@ import type {
   ReviewQueueItem,
   AttemptResponse,
   AttemptSignal,
-  ErrorClassification,
+
 } from '@/lib/types';
 import { SKILL_TAXONOMY } from '@/lib/types';
 
@@ -181,20 +181,8 @@ export async function POST(
     }
 
     // ----- Error Classification -----
-    let errorClassification: ErrorClassification | null = null;
-    if (!isCorrect && !skipped) {
-      try {
-        errorClassification = await classifyError({
-          question,
-          studentAnswer: student_answer,
-          timeSpentSeconds: time_spent_seconds ?? null,
-          confidenceLevel: confidence_level ?? null,
-        });
-      } catch (classifyErr) {
-        console.error('Error classification failed:', classifyErr);
-        // Non-fatal: continue without classification
-      }
-    }
+    // Classification is deferred to session end and run as a batch there
+    // (see /end route), so submitting an answer never blocks on a model call.
 
     // ----- Insert question_attempt -----
     const { error: attemptInsertError } = await supabase
@@ -207,9 +195,9 @@ export async function POST(
         is_correct: isCorrect,
         time_spent_seconds: time_spent_seconds ?? null,
         confidence_level: confidence_level ?? null,
-        error_type: sanitizeErrorType(errorClassification?.error_type),
-        distractor_type: errorClassification?.distractor_type ?? null,
-        error_explanation: errorClassification?.explanation ?? null,
+        error_type: null,
+        distractor_type: null,
+        error_explanation: null,
         attempted_at: new Date().toISOString(),
       });
 
@@ -349,7 +337,7 @@ export async function POST(
         delta: eloResult.delta,
         mastery_level: getMasteryLevel(eloResult.newElo),
       },
-      error_classification: errorClassification,
+      error_classification: null,
       frustration_state: frustrationState,
       session_stats: {
         questions_answered: newQuestionsAnswered,

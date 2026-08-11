@@ -82,6 +82,7 @@ export function ActiveSession({
   const [confidence, setConfidence] = useState<'guessing' | 'okay' | 'confident' | null>(null);
   const [crossedOut, setCrossedOut] = useState<Set<string>>(new Set());
   const questionStartTimeRef = useRef<number>(Date.now());
+  const strengthBoostRef = useRef<number>(0);
 
   // Attempt result state
   const [attemptResult, setAttemptResult] = useState<AttemptResponse | null>(null);
@@ -121,10 +122,21 @@ export function ActiveSession({
         throw new Error(data.error || 'Failed to end session');
       }
 
-      const session: Session = await res.json();
+      const session: Session & { insights_refresh_recommended?: boolean } =
+        await res.json();
       setEndedSession(session);
       setSummary(session.summary || 'Great effort! Keep practicing to improve your skills.');
       setState('ended');
+
+      // Enough new wrong answers accumulated - refresh the insight analysis
+      // in the background so it's ready next time the Insights page opens.
+      if (session.insights_refresh_recommended) {
+        fetch('/api/insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: studentId }),
+        }).catch(() => {});
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to end session');
       setState('answering');
@@ -137,11 +149,20 @@ export function ActiveSession({
     setError(null);
     setShowExplanationSheet(false);
 
+    // After choosing "switch to easier questions", the next few picks come
+    // from the student's strongest skill to rebuild confidence.
+    const preferStrength = strengthBoostRef.current > 0;
+    if (preferStrength) strengthBoostRef.current -= 1;
+
     try {
       const res = await fetch('/api/questions/next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, student_id: studentId }),
+        body: JSON.stringify({
+          session_id: sessionId,
+          student_id: studentId,
+          prefer_strength: preferStrength,
+        }),
       });
 
       if (!res.ok) {
@@ -336,6 +357,14 @@ export function ActiveSession({
         question={attemptResult.question}
         studentAnswer={selectedAnswer ?? ''}
         isCorrect={attemptResult.is_correct}
+        studentId={studentId}
+        frustrationLevel={
+          frustrationState?.isFrustrated
+            ? frustrationState.consecutiveWrong >= 5
+              ? 'high'
+              : 'medium'
+            : 'none'
+        }
       />
       <Button onClick={fetchNextQuestion} className="w-full">
         Next Question
@@ -383,6 +412,7 @@ export function ActiveSession({
                 difficulty={currentQuestion.difficulty}
                 questionNumber={questionNumber}
                 totalQuestions={maxQuestions}
+                isAiGenerated={currentQuestion.is_ai_generated}
               />
 
               <AnswerChoices
@@ -508,6 +538,7 @@ export function ActiveSession({
             <Button
               onClick={() => {
                 setShowFrustrationDialog(false);
+                strengthBoostRef.current = 3;
                 fetchNextQuestion();
               }}
             >

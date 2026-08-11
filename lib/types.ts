@@ -226,6 +226,9 @@ export interface ExplainRequest {
   strategy?: ExplanationStrategy;
   conversation_history?: Array<{ role: 'user' | 'assistant'; content: string }>;
   student_profile?: Partial<StudentProfile>;
+  /** When provided, the server builds a personalized profile for the tutor */
+  student_id?: string;
+  frustration_level?: 'none' | 'medium' | 'high';
 }
 
 export interface ExplainResponse {
@@ -258,6 +261,7 @@ export interface SafeQuestion {
   passage_text: string | null;
   answer_choices: Record<string, string>;
   tags: string[];
+  is_ai_generated?: boolean;
 }
 
 export interface EloUpdate {

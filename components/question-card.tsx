@@ -10,6 +10,7 @@ interface QuestionCardProps {
   difficulty: number;
   questionNumber: number;
   totalQuestions?: number;
+  isAiGenerated?: boolean;
 }
 
 export function QuestionCard({
@@ -19,6 +20,7 @@ export function QuestionCard({
   difficulty,
   questionNumber,
   totalQuestions,
+  isAiGenerated,
 }: QuestionCardProps) {
   const maxDifficulty = 5;
   const filledDots = Math.min(Math.max(difficulty, 0), maxDifficulty);
@@ -39,6 +41,11 @@ export function QuestionCard({
           </CardTitle>
           <div className="flex items-center gap-3">
             <Badge variant="secondary">{subSkillId}</Badge>
+            {isAiGenerated && (
+              <Badge variant="outline" className="border-amber-300 text-amber-700">
+                AI-Generated
+              </Badge>
+            )}
             <div className="flex items-center gap-1" title={`Difficulty: ${difficulty}/${maxDifficulty}`}>
               {Array.from({ length: filledDots }).map((_, i) => (
                 <span

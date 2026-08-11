@@ -208,6 +208,87 @@ export async function analyzePatterns(studentId: string): Promise<PatternAnalysi
   // Build pre-computed aggregations
   const aggregations = buildAggregations(typedAttempts, questionsMap);
 
+  // ----- Corrections that need right AND wrong attempts -----
+  // Confidence calibration and tilt can't be computed from wrong answers
+  // alone, so load the recent attempt stream (both outcomes) and overwrite.
+  const { data: recentAttempts } = await supabase
+    .from('question_attempts')
+    .select('confidence_level, is_correct, session_id, attempted_at, student_answer')
+    .eq('student_id', studentId)
+    .neq('student_answer', 'SKIP')
+    .order('attempted_at', { ascending: false })
+    .limit(300);
+
+  if (recentAttempts && recentAttempts.length > 0) {
+    type Row = {
+      confidence_level: string | null;
+      is_correct: boolean;
+      session_id: string;
+      attempted_at: string;
+    };
+    const rows = recentAttempts as Row[];
+
+    // Real confidence calibration: wrong-rate per confidence level
+    const calibration: Record<string, { wrong: number; total: number }> = {
+      confident: { wrong: 0, total: 0 },
+      okay: { wrong: 0, total: 0 },
+      guessing: { wrong: 0, total: 0 },
+    };
+    for (const row of rows) {
+      if (row.confidence_level && calibration[row.confidence_level]) {
+        calibration[row.confidence_level].total++;
+        if (!row.is_correct) calibration[row.confidence_level].wrong++;
+      }
+    }
+    aggregations.confidence_calibration = {
+      confident: calibration.confident,
+      guessing: calibration.guessing,
+      okay: calibration.okay,
+    };
+
+    // Tilt: accuracy on the question immediately after a wrong answer,
+    // vs overall accuracy, within each session.
+    const bySession = new Map<string, Row[]>();
+    for (const row of rows) {
+      if (!bySession.has(row.session_id)) bySession.set(row.session_id, []);
+      bySession.get(row.session_id)!.push(row);
+    }
+    let afterWrongTotal = 0;
+    let afterWrongCorrect = 0;
+    let overallTotal = 0;
+    let overallCorrect = 0;
+    for (const sessionRows of bySession.values()) {
+      const ordered = [...sessionRows].sort((a, b) =>
+        a.attempted_at.localeCompare(b.attempted_at)
+      );
+      for (let i = 0; i < ordered.length; i++) {
+        overallTotal++;
+        if (ordered[i].is_correct) overallCorrect++;
+        if (i > 0 && !ordered[i - 1].is_correct) {
+          afterWrongTotal++;
+          if (ordered[i].is_correct) afterWrongCorrect++;
+        }
+      }
+    }
+    (aggregations as Record<string, unknown>).cross_topic_tilt = {
+      accuracy_after_a_wrong_answer:
+        afterWrongTotal > 0 ? Math.round((afterWrongCorrect / afterWrongTotal) * 100) : null,
+      baseline_accuracy:
+        overallTotal > 0 ? Math.round((overallCorrect / overallTotal) * 100) : null,
+      sample_size: afterWrongTotal,
+    };
+  }
+
+  // Previous analysis, so the model can report real trends
+  // (improving / stagnant / worsening) instead of guessing.
+  const { data: previousInsight } = await supabase
+    .from('wrong_answer_insights')
+    .select('generated_at, total_wrong_answers_analyzed, top_insights, dimension_details')
+    .eq('student_id', studentId)
+    .order('generated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   // Build enriched wrong answer data (individual items for Opus context)
   const enrichedWrongAnswers = typedAttempts.slice(0, 50).map((attempt) => {
     const question = questionsMap[attempt.question_id];
@@ -258,6 +339,7 @@ export async function analyzePatterns(studentId: string): Promise<PatternAnalysi
       {
         aggregations,
         individual_wrong_answers: enrichedWrongAnswers,
+        previous_analysis_for_trend_comparison: previousInsight ?? null,
       },
       null,
       2
