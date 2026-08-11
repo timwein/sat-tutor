@@ -61,11 +61,13 @@ async function classifyErrorsThrottled(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, session_id, module_id, answers } = body as {
+    const { student_id, session_id, module_id, answers, is_final = true } = body as {
       student_id: string;
       session_id: string;
       module_id: string;
       answers: SubmitAnswer[];
+      /** false for non-final modules of a full practice test */
+      is_final?: boolean;
     };
 
     if (!student_id || !session_id || !module_id || !answers?.length) {
@@ -311,19 +313,29 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Update session stats
+    // Update session stats. Modules of a full practice test accumulate;
+    // the session only ends after the final module.
+    const priorAnswered = session.questions_answered ?? 0;
+    const priorCorrect = session.questions_correct ?? 0;
+    const cumulativeAnswered = priorAnswered + answers.length;
+    const cumulativeCorrect = priorCorrect + totalCorrect;
     const accuracy = answers.length > 0
       ? Math.round((totalCorrect / answers.length) * 100) / 100
+      : null;
+    const cumulativeAccuracy = cumulativeAnswered > 0
+      ? Math.round((cumulativeCorrect / cumulativeAnswered) * 100) / 100
       : null;
 
     await supabase
       .from('sessions')
       .update({
-        questions_answered: answers.length,
-        questions_correct: totalCorrect,
-        accuracy,
-        ended_at: new Date().toISOString(),
-        sub_skills_practiced: [...subSkillsPracticed],
+        questions_answered: cumulativeAnswered,
+        questions_correct: cumulativeCorrect,
+        accuracy: cumulativeAccuracy,
+        ...(is_final ? { ended_at: new Date().toISOString() } : {}),
+        sub_skills_practiced: [
+          ...new Set([...(session.sub_skills_practiced ?? []), ...subSkillsPracticed]),
+        ],
       })
       .eq('id', session_id);
 

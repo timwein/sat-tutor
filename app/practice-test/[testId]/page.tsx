@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase';
 import { TestClient } from './test-client';
+import { FullTestClient } from '@/components/full-test-client';
+import type { FullTestStageResult } from '@/lib/practice-test-config';
 
 export default async function PracticeTestSessionPage({
   params,
@@ -45,7 +47,31 @@ export default async function PracticeTestSessionPage({
     module_id: string;
     section: 'math' | 'reading_writing';
     time_limit_seconds: number;
+    full_test?: boolean;
+    stage_index?: number;
+    stage_results?: FullTestStageResult[];
+    stage_started_at?: string;
+    break_until?: string | null;
   } | null;
+
+  // Full practice test: the orchestrator drives module sequence + breaks.
+  if (metadata?.full_test === true) {
+    const stageStartedAt = metadata.stage_started_at ?? session.started_at;
+    const stageElapsed = Math.floor(
+      (Date.now() - new Date(stageStartedAt).getTime()) / 1000
+    );
+    const stageLimit = metadata.time_limit_seconds ?? 0;
+    return (
+      <FullTestClient
+        sessionId={session.id}
+        studentId={session.student_id}
+        stageIndex={metadata.stage_index ?? 0}
+        stageResults={metadata.stage_results ?? []}
+        breakUntil={metadata.break_until ?? null}
+        remainingSeconds={Math.max(0, stageLimit - stageElapsed)}
+      />
+    );
+  }
 
   if (!metadata) {
     return (

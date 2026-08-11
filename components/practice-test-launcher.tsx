@@ -72,6 +72,39 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
     }
   }
 
+  async function startFullTest() {
+    setStartingModule('full-test');
+    setStartError(null);
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: studentId,
+          session_type: 'full_practice_test',
+          metadata: {
+            full_test: true,
+            stage_index: 0,
+            stage_results: [],
+            stage_started_at: new Date().toISOString(),
+            module_id: 'rw-module-1',
+            section: 'reading_writing',
+            time_limit_seconds: 32 * 60,
+          },
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to create session');
+
+      const { session } = await res.json();
+      router.push(`/practice-test/${session.id}`);
+    } catch (error) {
+      console.error('Failed to start full practice test:', error);
+      setStartError("Couldn't start the test. Please try again.");
+      setStartingModule(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
@@ -131,38 +164,49 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
         </div>
       </div>
 
-      {/* Full Practice Test — Coming Soon */}
+      {/* Full Practice Test */}
       <div>
         <h2 className="mb-4 text-lg font-semibold text-gray-800">Full Practice Test</h2>
-        <Card className="opacity-75">
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-500">
+            <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Full-Length Practice Test
-              <Badge variant="secondary" className="ml-2">Coming Soon</Badge>
+              <Badge variant="secondary" className="ml-2">All 4 modules</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3 text-sm text-gray-500">
               <p>
-                A complete SAT practice test with all 4 modules (2 Reading & Writing + 2 Math),
-                adaptive difficulty, and a full score report.
+                The complete digital SAT experience: Reading &amp; Writing modules 1 and 2,
+                a 10-minute break, then Math modules 1 and 2. Module 2 difficulty adapts
+                to your module 1 performance, and you get an estimated score at the end.
               </p>
               <div className="flex justify-between">
                 <span>Total questions</span>
-                <span>98 questions</span>
+                <span>Up to 98 questions</span>
               </div>
               <div className="flex justify-between">
                 <span>Total time</span>
                 <span>~2 hours 14 minutes</span>
               </div>
               <p className="text-xs text-gray-400">
-                Requires more questions in the question bank. Check back soon.
+                Set aside an uninterrupted block - the timer keeps running like on test day.
               </p>
             </div>
-            <Button disabled className="mt-4">
-              Coming Soon
+            <Button
+              className="mt-4"
+              onClick={startFullTest}
+              disabled={startingModule !== null}
+            >
+              {startingModule === 'full-test' ? 'Starting...' : 'Start Full Practice Test'}
+              {startingModule !== 'full-test' && <ArrowRight className="ml-1 h-4 w-4" />}
             </Button>
+            {startError && startingModule === null && (
+              <p className="mt-2 text-sm text-red-600" role="alert">
+                {startError}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

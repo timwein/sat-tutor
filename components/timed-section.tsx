@@ -57,6 +57,10 @@ interface TimedSectionProps {
   timeLimitSeconds: number;
   calculatorAllowed: boolean;
   onComplete: (result: ModuleResult) => void;
+  /** Adaptive module 2 of a full test: bias question difficulty */
+  difficultyBias?: 'harder' | 'easier';
+  /** false while earlier modules of a full test remain */
+  isFinalModule?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -70,6 +74,8 @@ export function TimedSection({
   timeLimitSeconds,
   calculatorAllowed,
   onComplete,
+  difficultyBias,
+  isFinalModule,
 }: TimedSectionProps) {
   // -----------------------------------------------------------------------
   // Phase state machine
@@ -159,6 +165,7 @@ export function TimedSection({
             session_id: sessionId,
             section,
             question_count: questionCount,
+            difficulty_bias: difficultyBias,
           }),
         });
 
@@ -308,6 +315,7 @@ export function TimedSection({
           session_id: sessionId,
           module_id: moduleId,
           answers,
+          is_final: isFinalModule !== false,
         }),
       });
 
@@ -322,7 +330,7 @@ export function TimedSection({
       setErrorMessage(err instanceof Error ? err.message : 'Failed to submit module');
       setPhase('error');
     }
-  }, [questionStates, currentIndex, studentId, sessionId, moduleId, onComplete]);
+  }, [questionStates, currentIndex, studentId, sessionId, moduleId, onComplete, isFinalModule]);
 
   const handleAutoSubmit = useCallback(() => {
     handleSubmit();
