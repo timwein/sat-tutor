@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { SelfAnnotatingPassage } from '@/components/self-annotating-passage';
 import { Badge } from '@/components/ui/badge';
 
 interface QuestionCardProps {
@@ -65,8 +66,8 @@ export function QuestionCard({
       </CardHeader>
       <CardContent>
         {passageText && (
-          <div className="mb-4 max-h-40 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 p-3 text-sm italic text-gray-700 md:max-h-60 md:p-4">
-            {passageText}
+          <div className="mb-4 max-h-40 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 p-3 text-sm text-gray-700 md:max-h-60 md:p-4">
+            <SelfAnnotatingPassage text={passageText} />
           </div>
         )}
         <p className="text-base font-medium md:text-lg">{questionText}</p>

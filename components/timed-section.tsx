@@ -29,6 +29,7 @@ import { AnswerChoices } from './answer-choices';
 import { ConfidenceSelector } from './confidence-selector';
 import { DesmosCalculator } from './desmos-calculator';
 import { MathReferenceSheet } from './math-reference-sheet';
+import { SelfAnnotatingPassage } from './self-annotating-passage';
 import type { SafeQuestion, ModuleResult, AnnotationMark } from '@/lib/types';
 
 // ---------------------------------------------------------------------------
@@ -425,8 +426,8 @@ export function TimedSection({
                 <CardTitle className="text-sm text-gray-500">Passage</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-                  {currentQuestion!.passage_text}
+                <div className="prose prose-sm max-w-none text-gray-700">
+                  <SelfAnnotatingPassage text={currentQuestion!.passage_text!} />
                 </div>
               </CardContent>
             </Card>

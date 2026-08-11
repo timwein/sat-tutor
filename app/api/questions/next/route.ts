@@ -230,11 +230,29 @@ export async function POST(request: NextRequest) {
       if (strongest) subSkillFocus = strongest.sub_skill_id;
     }
 
+    // Reading & Writing focus preference: bias mixed study sessions toward
+    // RW questions (~3 in 4) when the student has it enabled in Settings.
+    let sectionFocus: 'math' | 'reading_writing' | null = null;
+    if (!subSkillFocus && typedSession.session_type === 'study_session') {
+      const { data: studentRow } = await supabase
+        .from('students')
+        .select('settings')
+        .eq('id', student_id)
+        .single();
+      const settings = (studentRow?.settings as Record<string, unknown> | null) ?? {};
+      if (settings.rw_focus === true && Math.random() < 0.75) {
+        sectionFocus = 'reading_writing';
+      }
+    }
+
     let lightQuery = supabase
       .from('questions')
       .select('id, question_id, sub_skill_id, difficulty, section');
     if (subSkillFocus) {
       lightQuery = lightQuery.eq('sub_skill_id', subSkillFocus);
+    }
+    if (sectionFocus) {
+      lightQuery = lightQuery.eq('section', sectionFocus);
     }
     const { data: lightQuestions, error: questionsError } = await lightQuery;
 
@@ -269,6 +287,7 @@ export async function POST(request: NextRequest) {
       sessionPhase,
       isFrustrated: frustrationState.isFrustrated,
       subSkillFocus,
+      sectionFocus,
     });
 
     if (!selectionResult) {

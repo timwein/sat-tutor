@@ -86,7 +86,9 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-6xl space-y-6 md:space-y-8">
       {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">Welcome back, Oren</h1>
+        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+          Welcome back{student?.name ? `, ${student.name.split(' ')[0]}` : ''}
+        </h1>
         <p className="mt-1 text-gray-500">
           Keep up the momentum. Your next study session is waiting.
         </p>

@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Users,
   GraduationCap,
+  Settings as SettingsIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -63,6 +64,13 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t px-3 py-4">
+        <Link
+          href="/settings"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+        >
+          <SettingsIcon className="h-5 w-5" />
+          Settings
+        </Link>
         <Link
           href="/parent"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"

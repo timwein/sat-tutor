@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { BookOpen, Lightbulb, BarChart3, RotateCcw } from 'lucide-react';
+import { BookOpen, Lightbulb, BarChart3, RotateCcw, ClipboardCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
   { label: 'Study', href: '/study', icon: BookOpen },
+  { label: 'Test', href: '/practice-test', icon: ClipboardCheck },
   { label: 'Insights', href: '/insights', icon: Lightbulb },
   { label: 'Progress', href: '/progress', icon: BarChart3 },
   { label: 'Review', href: '/review', icon: RotateCcw },
