@@ -8,6 +8,7 @@ import { computeCurrentStreak, getActivityDays } from '@/lib/streak-calculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProgressTabs } from '@/components/progress-tabs';
 import { ProgressChart } from '@/components/progress-chart';
+import { ExperimentPanel } from '@/components/experiment-panel';
 
 export default async function ProgressPage() {
   const supabase = createServerClient();
@@ -42,6 +43,15 @@ export default async function ProgressPage() {
 
   // Load activity days for heatmap (last 12 months)
   const activityDays = await getActivityDays(studentId, 12);
+
+  // Reading strategy experiment (latest, running or concluded)
+  const { data: experimentRow } = await supabase
+    .from('strategy_experiments')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
   // Load streak data
   const streakData = await computeCurrentStreak(studentId);
@@ -94,6 +104,13 @@ export default async function ProgressPage() {
 
       {/* Score trend over time */}
       <ProgressChart predictions={predictions} />
+
+      {/* Reading strategy experiment */}
+      <ExperimentPanel
+        studentId={studentId}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        experiment={experimentRow as any}
+      />
 
       {/* Tabbed content */}
       <ProgressTabs

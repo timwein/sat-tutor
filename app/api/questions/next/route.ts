@@ -215,6 +215,46 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Tag-drill session (grammar rule / logic relationship): serve only
+    // questions carrying the requested tag, unattempted first, random order.
+    const drillTag =
+      typeof sessionMetadata.drill_tag === 'string' ? sessionMetadata.drill_tag : null;
+    if (drillTag) {
+      const { data: tagQuestions, error: tagError } = await supabase
+        .from('questions')
+        .select('*')
+        .contains('tags', [drillTag]);
+      if (tagError) {
+        console.error('Failed to load tagged questions:', tagError);
+        return NextResponse.json({ error: 'Failed to load questions' }, { status: 500 });
+      }
+      const availableTagged = ((tagQuestions ?? []) as Question[]).filter(
+        (q) => !attemptedQuestionIds.has(q.question_id)
+      );
+      if (availableTagged.length === 0) {
+        return NextResponse.json({
+          question: null,
+          selection_metadata: { reason: 'Drill complete - no more questions for this focus' },
+          session_ended: true,
+        });
+      }
+      const chosen = availableTagged[Math.floor(Math.random() * availableTagged.length)];
+      return NextResponse.json({
+        question: stripToSafeQuestion(chosen),
+        selection_metadata: {
+          category: 'tag_drill',
+          drill_tag: drillTag,
+          target_sub_skill: chosen.sub_skill_id,
+          target_difficulty: chosen.difficulty,
+          reason: `Focused drill: ${drillTag.split(':')[1] ?? drillTag}`,
+          session_phase: sessionPhase,
+          frustration_state: frustrationState,
+          remaining: availableTagged.length - 1,
+        },
+        session_ended: false,
+      });
+    }
+
     // Load a lightweight view of the bank for selection (no passages), then
     // fetch the chosen question in full. Keeps payloads small as the bank grows.
     let subSkillFocus = (session as Record<string, unknown>).sub_skill_focus as
@@ -245,11 +285,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Experiment drills draw from a fixed pool of passage-comprehension
+    // skills so every protocol arm sees matched material.
+    const skillPool = Array.isArray(sessionMetadata.skill_pool)
+      ? (sessionMetadata.skill_pool as unknown[]).filter(
+          (s): s is string => typeof s === 'string'
+        )
+      : null;
+
     let lightQuery = supabase
       .from('questions')
       .select('id, question_id, sub_skill_id, difficulty, section');
     if (subSkillFocus) {
       lightQuery = lightQuery.eq('sub_skill_id', subSkillFocus);
+    } else if (skillPool && skillPool.length > 0) {
+      lightQuery = lightQuery.in('sub_skill_id', skillPool);
     }
     if (sectionFocus) {
       lightQuery = lightQuery.eq('section', sectionFocus);

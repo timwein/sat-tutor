@@ -17,6 +17,7 @@ import { ParentDetailedView } from './parent-detailed-view';
 import { ParentAlerts } from './parent-alerts';
 import { QuestionUploader } from './question-uploader';
 import { QuestionGenerator } from './question-generator';
+import { ClassifyTagsCard } from './classify-tags-card';
 import { QuestionBankOverview } from './question-bank-overview';
 import type { ParentDashboardData } from '@/lib/parent-dashboard';
 
@@ -238,6 +239,7 @@ export function ParentDashboardShell({
       <TabsContent value="questions" className="space-y-6">
         <QuestionBankOverview />
         <QuestionGenerator />
+        <ClassifyTagsCard />
         <QuestionUploader studentId={studentId} />
       </TabsContent>
     </Tabs>

@@ -21,6 +21,7 @@ interface FullTestClientProps {
   stageResults: FullTestStageResult[];
   breakUntil: string | null;
   remainingSeconds: number;
+  protocolReminder?: string | null;
 }
 
 function toStageResult(result: ModuleResult): FullTestStageResult {
@@ -49,6 +50,7 @@ export function FullTestClient({
   stageResults,
   breakUntil,
   remainingSeconds,
+  protocolReminder,
 }: FullTestClientProps) {
   const router = useRouter();
   const [advancing, setAdvancing] = useState(false);
@@ -231,6 +233,11 @@ export function FullTestClient({
       <p className="px-4 pt-3 text-center text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
         Full Practice Test · Stage {moduleNumber} of 4 · {moduleDef.label}
       </p>
+      {protocolReminder && moduleDef.section === 'reading_writing' && (
+        <p className="mx-4 rounded-md bg-blue-50 px-3 py-1.5 text-center text-xs font-medium text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+          {protocolReminder}
+        </p>
+      )}
       <TimedSection
         key={stage.moduleId}
         sessionId={sessionId}

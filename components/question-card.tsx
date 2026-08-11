@@ -2,6 +2,7 @@
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { SelfAnnotatingPassage } from '@/components/self-annotating-passage';
+import { TappableText } from '@/components/tappable-text';
 import { Badge } from '@/components/ui/badge';
 
 interface QuestionCardProps {
@@ -12,6 +13,9 @@ interface QuestionCardProps {
   questionNumber: number;
   totalQuestions?: number;
   isAiGenerated?: boolean;
+  /** When set, words become tappable for the word bank (study mode only). */
+  wordBankStudentId?: string;
+  questionId?: string;
 }
 
 export function QuestionCard({
@@ -22,6 +26,8 @@ export function QuestionCard({
   questionNumber,
   totalQuestions,
   isAiGenerated,
+  wordBankStudentId,
+  questionId,
 }: QuestionCardProps) {
   const maxDifficulty = 5;
   const filledDots = Math.min(Math.max(difficulty, 0), maxDifficulty);
@@ -67,10 +73,29 @@ export function QuestionCard({
       <CardContent>
         {passageText && (
           <div className="mb-4 max-h-40 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 dark:bg-gray-800/60 p-3 text-sm text-gray-700 dark:text-gray-300 md:max-h-60 md:p-4">
-            <SelfAnnotatingPassage text={passageText} />
+            {wordBankStudentId ? (
+              <TappableText
+                text={passageText}
+                studentId={wordBankStudentId}
+                sourceQuestionId={questionId}
+                sourceLabel={`${subSkillId} passage`}
+              />
+            ) : (
+              <SelfAnnotatingPassage text={passageText} />
+            )}
           </div>
         )}
-        <p className="text-base font-medium md:text-lg">{questionText}</p>
+        {wordBankStudentId ? (
+          <TappableText
+            text={questionText}
+            studentId={wordBankStudentId}
+            sourceQuestionId={questionId}
+            sourceLabel={`${subSkillId} question`}
+            className="text-base font-medium md:text-lg"
+          />
+        ) : (
+          <p className="text-base font-medium md:text-lg">{questionText}</p>
+        )}
       </CardContent>
     </Card>
   );

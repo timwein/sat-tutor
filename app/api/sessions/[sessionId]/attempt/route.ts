@@ -49,6 +49,7 @@ export async function POST(
       time_spent_seconds,
       confidence_level,
       skipped,
+      metadata,
     } = body;
 
     // Validate required fields
@@ -198,6 +199,7 @@ export async function POST(
         error_type: null,
         distractor_type: null,
         error_explanation: null,
+        metadata: metadata && typeof metadata === 'object' ? metadata : {},
         attempted_at: new Date().toISOString(),
       });
 
@@ -304,6 +306,62 @@ export async function POST(
             })
             .eq('id', review.id);
         }
+      }
+    }
+
+    // ----- Word bank hooks -----
+    // 1. Missing a Words-in-Context question auto-banks the tested word
+    //    (definition backfills lazily from the Word Bank page).
+    if (!isCorrect && question.sub_skill_id === 'RW-05') {
+      const testedWord = (
+        (question.answer_choices as Record<string, string>)[question.correct_answer] ?? ''
+      ).trim();
+      const normalized = testedWord.toLowerCase().replace(/[^a-z'-]/g, '');
+      if (normalized.length >= 3 && /^[A-Za-z][A-Za-z' -]*$/.test(testedWord) && testedWord.split(/\s+/).length <= 2) {
+        const { data: existingWord } = await supabase
+          .from('word_bank')
+          .select('id')
+          .eq('student_id', student_id)
+          .eq('normalized_word', normalized)
+          .maybeSingle();
+        if (!existingWord) {
+          await supabase.from('word_bank').insert({
+            student_id,
+            word: testedWord,
+            normalized_word: normalized,
+            context_sentence: question.passage_text
+              ? question.passage_text.slice(0, 400)
+              : question.question_text.slice(0, 400),
+            source_question_id: question.question_id,
+            source_label: 'From a missed question',
+            from_miss: true,
+          });
+        }
+      }
+    }
+
+    // 2. Vocab drill results update the banked word's mastery
+    const vocabTag = (question.tags ?? []).find((t) => t.startsWith('vocab:'));
+    if (vocabTag && !skipped) {
+      const normalized = vocabTag.slice('vocab:'.length);
+      const { data: wordRow } = await supabase
+        .from('word_bank')
+        .select('id, times_drilled, times_correct, correct_streak, status')
+        .eq('student_id', student_id)
+        .eq('normalized_word', normalized)
+        .maybeSingle();
+      if (wordRow) {
+        const newStreak = isCorrect ? (wordRow.correct_streak ?? 0) + 1 : 0;
+        await supabase
+          .from('word_bank')
+          .update({
+            times_drilled: (wordRow.times_drilled ?? 0) + 1,
+            times_correct: (wordRow.times_correct ?? 0) + (isCorrect ? 1 : 0),
+            correct_streak: newStreak,
+            // Three straight correct = mastered; a miss reactivates
+            status: newStreak >= 3 ? 'mastered' : isCorrect ? wordRow.status : 'active',
+          })
+          .eq('id', wordRow.id);
       }
     }
 

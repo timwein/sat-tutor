@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase';
 import { TestClient } from './test-client';
 import { FullTestClient } from '@/components/full-test-client';
+import { getArm } from '@/lib/strategy-experiments';
 import type { FullTestStageResult } from '@/lib/practice-test-config';
 
 export default async function PracticeTestSessionPage({
@@ -42,6 +43,27 @@ export default async function PracticeTestSessionPage({
     redirect('/practice-test');
   }
 
+  // Concluded reading-strategy experiment → one-line protocol reminder
+  // shown before Reading & Writing modules.
+  let protocolReminder: string | null = null;
+  const { data: concludedExperiment } = await supabase
+    .from('strategy_experiments')
+    .select('conclusion')
+    .eq('student_id', session.student_id)
+    .eq('status', 'concluded')
+    .order('concluded_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const winnerTag = (
+    concludedExperiment?.conclusion as { winner?: string } | null
+  )?.winner;
+  if (winnerTag) {
+    const winnerArm = getArm(winnerTag);
+    if (winnerArm) {
+      protocolReminder = `Your protocol: ${winnerArm.name} - ${winnerArm.instruction}`;
+    }
+  }
+
   // Extract metadata for the timed section
   const metadata = session.metadata as {
     module_id: string;
@@ -69,6 +91,7 @@ export default async function PracticeTestSessionPage({
         stageResults={metadata.stage_results ?? []}
         breakUntil={metadata.break_until ?? null}
         remainingSeconds={Math.max(0, stageLimit - stageElapsed)}
+        protocolReminder={protocolReminder}
       />
     );
   }
@@ -109,6 +132,7 @@ export default async function PracticeTestSessionPage({
       section={metadata.section}
       timeLimitSeconds={remainingSeconds}
       calculatorAllowed={calculatorAllowed}
+      protocolReminder={metadata.section === 'reading_writing' ? protocolReminder : null}
     />
   );
 }
