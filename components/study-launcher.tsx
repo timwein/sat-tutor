@@ -19,6 +19,8 @@ import type { Session } from '@/lib/types';
 interface StudyLauncherProps {
   studentId: string;
   lowestRatedSkill: string;
+  /** True when the preselected skill came from an insight's targeted-drill link */
+  highlightFocus?: boolean;
   recentSessions: Session[];
 }
 
@@ -27,7 +29,7 @@ const allSkills = [
   ...SKILL_TAXONOMY.reading_writing.map((s) => ({ ...s, section: 'reading_writing' as const })),
 ];
 
-export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: StudyLauncherProps) {
+export function StudyLauncher({ studentId, lowestRatedSkill, highlightFocus, recentSessions }: StudyLauncherProps) {
   const router = useRouter();
   const [selectedSkill, setSelectedSkill] = useState(lowestRatedSkill);
   const [isStarting, setIsStarting] = useState(false);
@@ -81,6 +83,12 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
             <p className="text-sm text-gray-500">
               10 questions, ~10 minutes. Focus on one sub-skill.
             </p>
+            {highlightFocus && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                <Target className="mr-1 inline h-3.5 w-3.5" />
+                Targeted drill: preselected from your insights
+              </div>
+            )}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Sub-skill focus</label>
               <Select value={selectedSkill} onValueChange={setSelectedSkill}>

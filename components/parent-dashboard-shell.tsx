@@ -89,14 +89,8 @@ export function ParentDashboardShell({
 
   function handlePinSuccess() {
     setPinDialogOpen(false);
-    if (pinMode === 'setup') {
-      // After setup, user needs to verify
-      setAuthState('needs-auth');
-      setPinDialogOpen(true);
-      setPinMode('verify');
-    } else {
-      setAuthState('authenticated');
-    }
+    // set-pin issues the auth cookie too, so setup goes straight in.
+    setAuthState('authenticated');
   }
 
   function handleAlertDismissed(alertId: string) {

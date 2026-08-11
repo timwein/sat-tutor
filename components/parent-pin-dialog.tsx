@@ -102,10 +102,11 @@ export function ParentPinDialog({
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label htmlFor="parent-pin" className="text-sm font-medium text-gray-700">
               {mode === 'setup' ? 'Create PIN' : 'PIN'}
             </label>
             <Input
+              id="parent-pin"
               type="password"
               inputMode="numeric"
               maxLength={6}
@@ -128,10 +129,11 @@ export function ParentPinDialog({
 
           {mode === 'setup' && (
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label htmlFor="parent-pin-confirm" className="text-sm font-medium text-gray-700">
                 Confirm PIN
               </label>
               <Input
+                id="parent-pin-confirm"
                 type="password"
                 inputMode="numeric"
                 maxLength={6}

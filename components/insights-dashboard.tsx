@@ -10,10 +10,13 @@ import { InsightCard } from '@/components/insight-card';
 import { DimensionDetail } from '@/components/dimension-detail';
 import type { WrongAnswerInsight } from '@/lib/types';
 
+import type { EvidenceMap } from '@/components/evidence-list';
+
 interface InsightsDashboardProps {
   insight: WrongAnswerInsight;
   wrongAnswerCount: number;
   studentId: string;
+  evidenceMap?: EvidenceMap;
 }
 
 const DIMENSION_MAP: Record<string, string> = {
@@ -47,6 +50,7 @@ export function InsightsDashboard({
   insight,
   wrongAnswerCount,
   studentId,
+  evidenceMap,
 }: InsightsDashboardProps) {
   const router = useRouter();
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -121,7 +125,12 @@ export function InsightsDashboard({
         </div>
         <div className="space-y-4">
           {currentInsight.top_insights.map((item, i) => (
-            <InsightCard key={item.dimension + i} insight={item} index={i + 1} />
+            <InsightCard
+              key={item.dimension + i}
+              insight={item}
+              index={i + 1}
+              evidenceMap={evidenceMap}
+            />
           ))}
         </div>
       </div>
@@ -149,6 +158,7 @@ export function InsightsDashboard({
                 dimensionKey={key}
                 dimensionLabel={DIMENSION_MAP[key]}
                 detail={currentInsight.dimension_details?.[key] ?? null}
+                evidenceMap={evidenceMap}
               />
             </TabsContent>
           ))}

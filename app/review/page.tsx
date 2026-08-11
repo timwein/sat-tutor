@@ -5,7 +5,16 @@ import { Button } from '@/components/ui/button';
 import { createServerClient } from '@/lib/supabase';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import type { ReviewQueueItem, Question } from '@/lib/types';
-import Link from 'next/link';
+import { StartReviewButton } from '@/components/start-review-button';
+
+function formatReviewDate(dateStr: string): string {
+  const date = new Date(`${dateStr.slice(0, 10)}T00:00:00`);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
 // Build a lookup map from skill id to skill name
 const allSkills = [...SKILL_TAXONOMY.reading_writing, ...SKILL_TAXONOMY.math];
@@ -144,7 +153,7 @@ export default async function ReviewPage() {
                             Review #{item.review_count + 1}
                           </span>
                           <span className="text-xs text-gray-400">
-                            Due: {item.next_review_date}
+                            Due: {formatReviewDate(item.next_review_date)}
                           </span>
                         </div>
                       </div>
@@ -153,9 +162,7 @@ export default async function ReviewPage() {
                 })}
               </div>
               <div className="pt-2">
-                <Link href="/study">
-                  <Button>Start Review</Button>
-                </Link>
+                <StartReviewButton studentId={studentId} />
               </div>
             </div>
           )}
@@ -174,7 +181,7 @@ export default async function ReviewPage() {
                   key={date}
                   className="flex items-center justify-between rounded-lg border px-4 py-2"
                 >
-                  <span className="text-sm font-medium">{date}</span>
+                  <span className="text-sm font-medium">{formatReviewDate(date)}</span>
                   <span className="text-sm text-gray-500">
                     {items.length} question{items.length !== 1 ? 's' : ''}
                   </span>

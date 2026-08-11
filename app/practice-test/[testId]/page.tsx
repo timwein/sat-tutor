@@ -68,13 +68,20 @@ export default async function PracticeTestSessionPage({
 
   const calculatorAllowed = metadata.section === 'math';
 
+  // The clock runs from session start, so a page reload resumes with the
+  // real remaining time instead of restarting the timer.
+  const elapsedSeconds = Math.floor(
+    (Date.now() - new Date(session.started_at).getTime()) / 1000
+  );
+  const remainingSeconds = Math.max(0, metadata.time_limit_seconds - elapsedSeconds);
+
   return (
     <TestClient
       sessionId={session.id}
       studentId={session.student_id}
       moduleId={metadata.module_id}
       section={metadata.section}
-      timeLimitSeconds={metadata.time_limit_seconds}
+      timeLimitSeconds={remainingSeconds}
       calculatorAllowed={calculatorAllowed}
     />
   );

@@ -7,6 +7,7 @@ import { getMasteryLevel } from '@/lib/elo';
 import { computeCurrentStreak, getActivityDays } from '@/lib/streak-calculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProgressTabs } from '@/components/progress-tabs';
+import { ProgressChart } from '@/components/progress-chart';
 
 export default async function ProgressPage() {
   const supabase = createServerClient();
@@ -22,12 +23,13 @@ export default async function ProgressPage() {
   const ratings = (skillRatings ?? []) as SkillRating[];
 
   // Load latest score prediction
-  const { data: scorePrediction } = await supabase
+  const { data: predictionHistory } = await supabase
     .from('score_predictions').select('*')
     .eq('student_id', studentId)
-    .order('predicted_at', { ascending: false })
-    .limit(1).maybeSingle();
-  const prediction = scorePrediction as ScorePrediction | null;
+    .order('predicted_at', { ascending: true })
+    .limit(60);
+  const predictions = (predictionHistory ?? []) as ScorePrediction[];
+  const prediction = predictions.length > 0 ? predictions[predictions.length - 1] : null;
 
   // Load recent completed sessions
   const { data: sessionsData } = await supabase
@@ -89,6 +91,9 @@ export default async function ProgressPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Score trend over time */}
+      <ProgressChart predictions={predictions} />
 
       {/* Tabbed content */}
       <ProgressTabs

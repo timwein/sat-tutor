@@ -148,10 +148,67 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Load all questions from DB
-    const { data: allQuestions, error: questionsError } = await supabase
+    const attemptedQuestionIds = new Set(typedAttempts.map((a) => a.question_id));
+
+    // Review-mode session: serve the exact questions that are due for review,
+    // oldest due first. The session ends when the due list is exhausted.
+    const sessionMetadata =
+      ((session as Record<string, unknown>).metadata as Record<string, unknown> | null) ?? {};
+    if (sessionMetadata.review === true) {
+      const dueUnattempted = [...typedReviewItems]
+        .sort((a, b) => a.next_review_date.localeCompare(b.next_review_date))
+        .filter((item) => !attemptedQuestionIds.has(item.question_id));
+
+      if (dueUnattempted.length === 0) {
+        return NextResponse.json({
+          question: null,
+          selection_metadata: { reason: 'Review queue cleared - nice work!' },
+          session_ended: true,
+        });
+      }
+
+      const target = dueUnattempted[0];
+      const { data: reviewQuestion } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('question_id', target.question_id)
+        .single();
+
+      if (!reviewQuestion) {
+        return NextResponse.json({
+          question: null,
+          selection_metadata: { reason: 'Review question missing from bank' },
+          session_ended: true,
+        });
+      }
+
+      return NextResponse.json({
+        question: stripToSafeQuestion(reviewQuestion as Question),
+        selection_metadata: {
+          category: 'spaced_repetition',
+          target_sub_skill: (reviewQuestion as Question).sub_skill_id,
+          target_difficulty: (reviewQuestion as Question).difficulty,
+          reason: `Review #${target.review_count + 1}, due ${target.next_review_date}`,
+          session_phase: sessionPhase,
+          frustration_state: frustrationState,
+          remaining_reviews: dueUnattempted.length - 1,
+        },
+        session_ended: false,
+      });
+    }
+
+    // Load a lightweight view of the bank for selection (no passages), then
+    // fetch the chosen question in full. Keeps payloads small as the bank grows.
+    let lightQuery = supabase
       .from('questions')
-      .select('*');
+      .select('id, question_id, sub_skill_id, difficulty, section');
+    const subSkillFocus = (session as Record<string, unknown>).sub_skill_focus as
+      | string
+      | undefined;
+    if (subSkillFocus) {
+      lightQuery = lightQuery.eq('sub_skill_id', subSkillFocus);
+    }
+    const { data: lightQuestions, error: questionsError } = await lightQuery;
 
     if (questionsError) {
       console.error('Failed to load questions:', questionsError);
@@ -161,10 +218,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const typedQuestions = (allQuestions || []) as Question[];
+    const typedQuestions = (lightQuestions || []) as Question[];
 
     // Filter out already-attempted questions
-    const attemptedQuestionIds = new Set(typedAttempts.map((a) => a.question_id));
     const availableQuestions = typedQuestions.filter(
       (q) => !attemptedQuestionIds.has(q.question_id)
     );
@@ -184,7 +240,7 @@ export async function POST(request: NextRequest) {
       availableQuestions,
       sessionPhase,
       isFrustrated: frustrationState.isFrustrated,
-      subSkillFocus: (session as Record<string, unknown>).sub_skill_focus as string | undefined,
+      subSkillFocus,
     });
 
     if (!selectionResult) {
@@ -195,8 +251,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Fetch the chosen question in full (passage, choices, etc.)
+    const { data: fullQuestion, error: fullError } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('question_id', selectionResult.question.question_id)
+      .single();
+
+    if (fullError || !fullQuestion) {
+      console.error('Failed to load selected question:', fullError);
+      return NextResponse.json(
+        { error: 'Failed to load selected question' },
+        { status: 500 }
+      );
+    }
+
     // Strip sensitive fields for the client
-    const safeQuestion = stripToSafeQuestion(selectionResult.question);
+    const safeQuestion = stripToSafeQuestion(fullQuestion as Question);
 
     return NextResponse.json({
       question: safeQuestion,

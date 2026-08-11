@@ -13,10 +13,35 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { InsightItem } from '@/lib/types';
+import { EvidenceList, type EvidenceMap } from '@/components/evidence-list';
 
 interface InsightCardProps {
   insight: InsightItem;
   index: number;
+  evidenceMap?: EvidenceMap;
+}
+
+/**
+ * Resolve the sub-skill a targeted drill should focus on: prefer a skill id
+ * mentioned in the finding/recommendation text, else the dominant skill among
+ * the evidence questions.
+ */
+function resolveFocusSkill(insight: InsightItem, evidenceMap: EvidenceMap): string | null {
+  const text = `${insight.finding} ${insight.recommendation}`;
+  const mentioned = text.match(/\b(M|RW)-\d{2}\b/);
+  if (mentioned) return mentioned[0];
+
+  const counts = new Map<string, number>();
+  for (const id of insight.evidence_question_ids ?? []) {
+    const q = evidenceMap[id];
+    if (q) counts.set(q.sub_skill_id, (counts.get(q.sub_skill_id) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [skill, count] of counts) {
+    if (count > bestCount) { best = skill; bestCount = count; }
+  }
+  return best;
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -52,7 +77,8 @@ function TrendIndicator({ trend }: { trend: InsightItem['trend'] }) {
   }
 }
 
-export function InsightCard({ insight, index }: InsightCardProps) {
+export function InsightCard({ insight, index, evidenceMap }: InsightCardProps) {
+  const focusSkill = resolveFocusSkill(insight, evidenceMap ?? {});
   return (
     <Card>
       <CardHeader>
@@ -84,15 +110,20 @@ export function InsightCard({ insight, index }: InsightCardProps) {
           </p>
         </div>
 
-        <p className="flex items-center gap-1 text-xs text-gray-500">
-          <Target className="h-3.5 w-3.5" />
-          Based on {insight.evidence_question_ids.length} questions
-        </p>
+        <div className="flex items-start gap-1">
+          <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-500" />
+          <EvidenceList
+            questionIds={insight.evidence_question_ids}
+            evidenceMap={evidenceMap ?? {}}
+          />
+        </div>
       </CardContent>
 
       <CardFooter>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/study">Start Targeted Drill</Link>
+          <Link href={focusSkill ? `/study?focus=${focusSkill}` : '/study'}>
+            {focusSkill ? `Start Targeted Drill (${focusSkill})` : 'Start Targeted Drill'}
+          </Link>
         </Button>
       </CardFooter>
     </Card>

@@ -10,11 +10,13 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { DimensionDetail as DimensionDetailType } from '@/lib/types';
+import { EvidenceList, type EvidenceMap } from '@/components/evidence-list';
 
 interface DimensionDetailProps {
   dimensionKey: string;
   dimensionLabel: string;
   detail: DimensionDetailType | null | undefined;
+  evidenceMap?: EvidenceMap;
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
@@ -54,6 +56,7 @@ export function DimensionDetail({
   dimensionKey,
   dimensionLabel,
   detail,
+  evidenceMap,
 }: DimensionDetailProps) {
   if (!detail) {
     return (
@@ -97,10 +100,13 @@ export function DimensionDetail({
           </p>
         </div>
 
-        <p className="flex items-center gap-1 text-xs text-gray-500">
-          <Target className="h-3.5 w-3.5" />
-          Based on {detail.evidence_question_ids.length} questions
-        </p>
+        <div className="flex items-start gap-1">
+          <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-500" />
+          <EvidenceList
+            questionIds={detail.evidence_question_ids}
+            evidenceMap={evidenceMap ?? {}}
+          />
+        </div>
       </CardContent>
     </Card>
   );
