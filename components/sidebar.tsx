@@ -15,6 +15,7 @@ import {
   Settings as SettingsIcon,
   SpellCheck,
   Dumbbell,
+  FlaskConical,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,7 @@ const navItems = [
   { label: 'Word Bank', href: '/word-bank', icon: BookMarked },
   { label: 'Grammar Map', href: '/grammar', icon: SpellCheck },
   { label: 'Transition Gym', href: '/gym', icon: Dumbbell },
+  { label: 'Strategy Lab', href: '/strategy', icon: FlaskConical },
 ];
 
 export function Sidebar() {
