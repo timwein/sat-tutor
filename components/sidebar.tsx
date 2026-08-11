@@ -14,6 +14,7 @@ import {
   GraduationCap,
   Settings as SettingsIcon,
   SpellCheck,
+  Dumbbell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +27,7 @@ const navItems = [
   { label: 'Review Queue', href: '/review', icon: RotateCcw },
   { label: 'Word Bank', href: '/word-bank', icon: BookMarked },
   { label: 'Grammar Map', href: '/grammar', icon: SpellCheck },
+  { label: 'Transition Gym', href: '/gym', icon: Dumbbell },
 ];
 
 export function Sidebar() {
