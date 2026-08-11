@@ -1,6 +1,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { SESSION_CONFIGS } from '@/lib/session-manager';
 import { ActiveSession } from '@/components/active-session';
+import { ProtocolBrief } from '@/components/protocol-brief';
 import type { Session } from '@/lib/types';
 
 export default async function SessionPage({
@@ -33,7 +34,7 @@ export default async function SessionPage({
   const session = sessionData as Session;
   const config = SESSION_CONFIGS[session.session_type] ?? SESSION_CONFIGS.study_session;
 
-  return (
+  const activeSession = (
     <ActiveSession
       sessionId={sessionId}
       studentId={session.student_id}
@@ -43,4 +44,12 @@ export default async function SessionPage({
       maxQuestions={config.maxQuestions}
     />
   );
+
+  // Experiment drills open with their protocol brief (until the first answer)
+  const experimentArm = session.metadata?.experiment_arm;
+  if (typeof experimentArm === 'string' && session.questions_answered === 0) {
+    return <ProtocolBrief armTag={experimentArm}>{activeSession}</ProtocolBrief>;
+  }
+
+  return activeSession;
 }

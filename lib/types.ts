@@ -53,6 +53,7 @@ export interface Session {
   summary: string | null;
   mood_signals: unknown[];
   sub_skills_practiced: string[];
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface QuestionAttempt {

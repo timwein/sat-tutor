@@ -288,6 +288,25 @@ export async function POST(
       console.error('Goal progress update failed (non-fatal):', goalErr);
     }
 
+    // Strategy experiment: fold this drill's results into its arm tally,
+    // and conclude the experiment once every arm has enough drills.
+    try {
+      const sessionMeta =
+        (session.metadata as Record<string, unknown> | null) ?? {};
+      const experimentId = sessionMeta.experiment_id;
+      const experimentArm = sessionMeta.experiment_arm;
+      if (typeof experimentId === 'string' && typeof experimentArm === 'string') {
+        const { tallyExperimentDrill } = await import('@/lib/experiment-conclude');
+        await tallyExperimentDrill(supabase, {
+          experimentId,
+          arm: experimentArm,
+          sessionId,
+        });
+      }
+    } catch (experimentErr) {
+      console.error('Experiment tally failed (non-fatal):', experimentErr);
+    }
+
     // Recommend an insights refresh when enough new wrong answers have
     // accumulated since the last analysis (spec: every 5 new wrong answers).
     let insightsRefreshRecommended = false;

@@ -285,11 +285,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Experiment drills draw from a fixed pool of passage-comprehension
+    // skills so every protocol arm sees matched material.
+    const skillPool = Array.isArray(sessionMetadata.skill_pool)
+      ? (sessionMetadata.skill_pool as unknown[]).filter(
+          (s): s is string => typeof s === 'string'
+        )
+      : null;
+
     let lightQuery = supabase
       .from('questions')
       .select('id, question_id, sub_skill_id, difficulty, section');
     if (subSkillFocus) {
       lightQuery = lightQuery.eq('sub_skill_id', subSkillFocus);
+    } else if (skillPool && skillPool.length > 0) {
+      lightQuery = lightQuery.in('sub_skill_id', skillPool);
     }
     if (sectionFocus) {
       lightQuery = lightQuery.eq('section', sectionFocus);
