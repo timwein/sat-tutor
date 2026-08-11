@@ -413,6 +413,8 @@ export function ActiveSession({
                 questionNumber={questionNumber}
                 totalQuestions={maxQuestions}
                 isAiGenerated={currentQuestion.is_ai_generated}
+                wordBankStudentId={studentId}
+                questionId={currentQuestion.question_id}
               />
 
               <AnswerChoices

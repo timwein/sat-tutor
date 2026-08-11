@@ -25,7 +25,7 @@ export function TestClient({
   const [result, setResult] = useState<ModuleResult | null>(null);
 
   if (result) {
-    return <ModuleReview result={result} onBack={() => router.push('/practice-test')} />;
+    return <ModuleReview result={result} studentId={studentId} onBack={() => router.push('/practice-test')} />;
   }
 
   return (

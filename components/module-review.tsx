@@ -15,12 +15,14 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { PacingChart } from './pacing-chart';
 import { PacingSummary } from './pacing-summary';
+import { AddWordInline } from './add-word-inline';
 import { cn } from '@/lib/utils';
 import type { ModuleResult, MasteryLevel } from '@/lib/types';
 
 interface ModuleReviewProps {
   result: ModuleResult;
   onBack: () => void;
+  studentId?: string;
 }
 
 const MASTERY_COLORS: Record<MasteryLevel, string> = {
@@ -35,7 +37,7 @@ const SECTION_LABELS: Record<string, string> = {
   reading_writing: 'Reading & Writing',
 };
 
-export function ModuleReview({ result, onBack }: ModuleReviewProps) {
+export function ModuleReview({ result, onBack, studentId }: ModuleReviewProps) {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const thresholdSeconds = result.section === 'math' ? 90 : 75;
@@ -257,6 +259,23 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                           )}
                           <span>Time: {qr.timeSpentSeconds}s</span>
                         </div>
+
+                        {/* Bank a word from this question (R/W only) */}
+                        {studentId && result.section === 'reading_writing' && (
+                          <AddWordInline
+                            studentId={studentId}
+                            suggestedWord={
+                              qr.question.sub_skill_id === 'RW-05' &&
+                              /^[A-Za-z][A-Za-z' -]*$/.test(qr.correctAnswer ?? '') &&
+                              (qr.correctAnswer ?? '').split(/\s+/).length <= 2
+                                ? qr.correctAnswer
+                                : undefined
+                            }
+                            contextSentence={qr.question.passage_text?.slice(0, 400) ?? qr.question.question_text.slice(0, 400)}
+                            sourceQuestionId={qr.question.question_id}
+                            sourceLabel="From a practice test"
+                          />
+                        )}
 
                         {/* Error explanation */}
                         {!qr.isCorrect && qr.errorClassification && (

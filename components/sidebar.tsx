@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { ThemeToggle } from '@/components/theme-toggle';
 import {
   BookOpen,
+  BookMarked,
   ClipboardCheck,
   Lightbulb,
   BarChart3,
@@ -22,6 +23,7 @@ const navItems = [
   { label: 'Wrong Answer Insights', href: '/insights', icon: Lightbulb, star: true },
   { label: 'My Progress', href: '/progress', icon: BarChart3 },
   { label: 'Review Queue', href: '/review', icon: RotateCcw },
+  { label: 'Word Bank', href: '/word-bank', icon: BookMarked },
 ];
 
 export function Sidebar() {

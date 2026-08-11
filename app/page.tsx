@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import Link from 'next/link';
 import {
   BookOpen,
+  BookMarked,
   Lightbulb,
   BarChart3,
   RotateCcw,
@@ -67,6 +68,12 @@ export default async function DashboardPage() {
     .select('*', { count: 'exact', head: true })
     .eq('student_id', studentId)
     .lte('next_review_date', today);
+
+  // 6b. Word bank size
+  const { count: wordBankCount } = await supabase
+    .from('word_bank')
+    .select('*', { count: 'exact', head: true })
+    .eq('student_id', studentId);
 
   // 7. Load micro-goals
   let goals: Awaited<ReturnType<typeof getOrGenerateWeeklyGoals>> = [];
@@ -156,7 +163,7 @@ export default async function DashboardPage() {
       </Card>
 
       {/* Navigation Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Link href="/study">
           <Card className="cursor-pointer transition-shadow hover:shadow-md">
             <CardContent className="flex flex-col items-center gap-3 pt-6">
@@ -209,6 +216,23 @@ export default async function DashboardPage() {
               </h3>
               <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 Spaced repetition
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/word-bank">
+          <Card className="cursor-pointer transition-shadow hover:shadow-md">
+            <CardContent className="flex flex-col items-center gap-3 pt-6">
+              <BookMarked className="h-10 w-10 text-indigo-600" />
+              <h3 className="font-semibold">
+                Word Bank
+                {(wordBankCount ?? 0) > 0 && (
+                  <Badge variant="secondary" className="ml-2">{wordBankCount}</Badge>
+                )}
+              </h3>
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                Your personal vocabulary
               </p>
             </CardContent>
           </Card>
