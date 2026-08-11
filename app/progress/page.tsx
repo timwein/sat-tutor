@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { createServerClient } from '@/lib/supabase';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import type { SkillRating, ScorePrediction, Session } from '@/lib/types';
