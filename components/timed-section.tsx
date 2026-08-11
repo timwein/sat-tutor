@@ -292,8 +292,8 @@ export function TimedSection({
     try {
       const answers = finalStates.map((qs) => ({
         question_id: qs.questionId,
-        selected_answer: qs.selectedAnswer,
-        time_spent_ms: qs.timeSpentMs,
+        student_answer: qs.selectedAnswer,
+        time_spent_seconds: Math.round(qs.timeSpentMs / 1000),
         confidence_level: qs.confidenceLevel,
         flagged: qs.flagged,
         crossed_out: qs.crossedOut,

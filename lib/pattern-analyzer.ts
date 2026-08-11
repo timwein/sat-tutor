@@ -267,7 +267,7 @@ export async function analyzePatterns(studentId: string): Promise<PatternAnalysi
   // Call Claude Opus
   const response = await anthropic.messages.create({
     model: MODELS.OPUS,
-    max_tokens: 2048,
+    max_tokens: 8192,
     system: systemPrompt,
     messages: [
       {
@@ -277,8 +277,8 @@ export async function analyzePatterns(studentId: string): Promise<PatternAnalysi
     ],
   });
 
-  const text =
-    response.content[0].type === 'text' ? response.content[0].text : '{}';
+  const textBlock = response.content.find((block) => block.type === 'text');
+  const text = textBlock?.type === 'text' ? textBlock.text : '{}';
   const jsonString = text
     .replace(/```json?\n?/g, '')
     .replace(/```/g, '')

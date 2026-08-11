@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { createServerClient } from '@/lib/supabase';
 import { ParentDashboardShell } from '@/components/parent-dashboard-shell';
 

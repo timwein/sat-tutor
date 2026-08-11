@@ -8,8 +8,13 @@ const anthropic = new Anthropic({
 
 export const MODELS = {
   SONNET: 'claude-sonnet-4-6',
-  OPUS: 'claude-opus-4-6',
+  OPUS: 'claude-opus-5',
 } as const;
+
+// Opus 5 thinks by default and max_tokens caps thinking + visible text
+// together, so explanation calls need more headroom than the old 1024.
+const TUTOR_MAX_TOKENS = 4096;
+const TUTOR_EFFORT = { effort: 'medium' as const };
 
 export interface ExplainParams {
   question: Question;
@@ -67,13 +72,22 @@ export async function generateExplanation(params: ExplainParams): Promise<{
   messages.push({ role: 'user', content: userMessage });
 
   const response = await anthropic.messages.create({
-    model: MODELS.SONNET,
-    max_tokens: 1024,
+    model: MODELS.OPUS,
+    max_tokens: TUTOR_MAX_TOKENS,
+    output_config: TUTOR_EFFORT,
     system: systemPrompt,
     messages,
   });
 
-  const explanation = response.content[0].type === 'text' ? response.content[0].text : '';
+  if (response.stop_reason === 'refusal') {
+    return {
+      explanation: "I couldn't generate an explanation for this question. Please try again or ask your tutor for help.",
+      strategyUsed: selectedStrategy,
+    };
+  }
+
+  const textBlock = response.content.find((block) => block.type === 'text');
+  const explanation = textBlock?.type === 'text' ? textBlock.text : '';
 
   return { explanation, strategyUsed: selectedStrategy };
 }
@@ -122,8 +136,9 @@ export async function* streamExplanation(params: ExplainParams): AsyncGenerator<
   messages.push({ role: 'user', content: userMessage });
 
   const stream = anthropic.messages.stream({
-    model: MODELS.SONNET,
-    max_tokens: 1024,
+    model: MODELS.OPUS,
+    max_tokens: TUTOR_MAX_TOKENS,
+    output_config: TUTOR_EFFORT,
     system: systemPrompt,
     messages,
   });

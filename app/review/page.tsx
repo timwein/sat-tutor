@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createServerClient } from '@/lib/supabase';
@@ -64,10 +66,10 @@ export default async function ReviewPage() {
     const { data: questions } = await supabase
       .from('questions')
       .select('*')
-      .in('id', dueQuestionIds);
+      .in('question_id', dueQuestionIds);
 
     for (const q of (questions ?? []) as Question[]) {
-      questionsMap.set(q.id, q);
+      questionsMap.set(q.question_id, q);
     }
   }
 

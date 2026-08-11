@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { createServerClient } from '@/lib/supabase';
 import { PreThresholdCard } from '@/components/pre-threshold-card';
 import { InsightsDashboard } from '@/components/insights-dashboard';

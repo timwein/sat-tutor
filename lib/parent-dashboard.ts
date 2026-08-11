@@ -220,14 +220,14 @@ export async function getParentDashboardData(
     if (questionIds.length > 0) {
       const { data: questions } = await supabase
         .from('questions')
-        .select('id, sub_skill_id')
-        .in('id', questionIds);
+        .select('question_id, sub_skill_id')
+        .in('question_id', questionIds);
 
       for (const q of (questions ?? []) as Array<{
-        id: string;
+        question_id: string;
         sub_skill_id: string;
       }>) {
-        questionSkillMap.set(q.id, q.sub_skill_id);
+        questionSkillMap.set(q.question_id, q.sub_skill_id);
       }
     }
 
@@ -425,11 +425,11 @@ export async function generateParentAlerts(
     // Get question IDs for this skill
     const { data: skillQuestions } = await supabase
       .from('questions')
-      .select('id')
+      .select('question_id')
       .eq('sub_skill_id', skill.sub_skill_id);
 
     const skillQuestionIds = new Set(
-      (skillQuestions ?? []).map((q: { id: string }) => q.id)
+      (skillQuestions ?? []).map((q: { question_id: string }) => q.question_id)
     );
 
     const relevantAttempts = (

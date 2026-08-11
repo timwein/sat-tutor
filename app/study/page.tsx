@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createServerClient } from '@/lib/supabase';
 import { SKILL_TAXONOMY } from '@/lib/types';

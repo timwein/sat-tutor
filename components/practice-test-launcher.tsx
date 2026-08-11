@@ -41,9 +41,11 @@ const SECTION_OPTIONS = [
 export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTestLauncherProps) {
   const router = useRouter();
   const [startingModule, setStartingModule] = useState<string | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
 
   async function startTimedSection(moduleId: string, section: 'math' | 'reading_writing', timeLimitSeconds: number) {
     setStartingModule(moduleId);
+    setStartError(null);
     try {
       const res = await fetch('/api/sessions', {
         method: 'POST',
@@ -65,6 +67,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
       router.push(`/practice-test/${session.id}`);
     } catch (error) {
       console.error('Failed to start timed section:', error);
+      setStartError("Couldn't start the section. Please try again.");
       setStartingModule(null);
     }
   }
@@ -116,6 +119,11 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                     {isStarting ? 'Starting...' : 'Start'}
                     {!isStarting && <ArrowRight className="ml-1 h-4 w-4" />}
                   </Button>
+                  {startError && startingModule === null && (
+                    <p className="text-sm text-red-600" role="alert">
+                      {startError}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             );
