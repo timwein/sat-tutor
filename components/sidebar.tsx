@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   BookOpen,
   ClipboardCheck,
@@ -64,6 +65,10 @@ export function Sidebar() {
       </nav>
 
       <div className="border-t px-3 py-4">
+        <div className="flex items-center justify-between rounded-lg px-3 py-2">
+          <span className="text-sm font-medium text-gray-600">Theme</span>
+          <ThemeToggle className="text-gray-500 hover:text-gray-800" />
+        </div>
         <Link
           href="/settings"
           className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"

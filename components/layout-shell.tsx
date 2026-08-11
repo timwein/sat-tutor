@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { GraduationCap, Settings as SettingsIcon, Users } from 'lucide-react';
 import { Sidebar } from '@/components/sidebar';
 import { BottomNav } from '@/components/bottom-nav';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -25,6 +26,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
           <span className="text-lg font-bold text-gray-900">SAT Tutor Pro</span>
         </Link>
         <div className="flex items-center gap-3">
+          <ThemeToggle className="text-gray-500 active:text-gray-700" />
           <Link
             href="/settings"
             aria-label="Settings"
