@@ -106,7 +106,7 @@ export function ParentDashboardShell({
   if (authState === 'loading') {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -124,11 +124,11 @@ export function ParentDashboardShell({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               The parent dashboard provides a comprehensive view of your
               student&apos;s SAT prep journey, including:
             </p>
-            <ul className="ml-4 list-disc space-y-1 text-sm text-gray-600">
+            <ul className="ml-4 list-disc space-y-1 text-sm text-gray-600 dark:text-gray-300">
               <li>Predicted score and trend</li>
               <li>Total study time this week/month</li>
               <li>Session frequency and consistency</li>
@@ -191,7 +191,7 @@ export function ParentDashboardShell({
   if (loadingData || !dashboardData) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gray-500">Loading dashboard data...</div>
+        <div className="text-gray-500 dark:text-gray-400">Loading dashboard data...</div>
       </div>
     );
   }

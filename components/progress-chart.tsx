@@ -75,7 +75,7 @@ export function ProgressChart({ predictions }: ProgressChartProps) {
             </ComposedChart>
           </ResponsiveContainer>
         </div>
-        <p className="mt-2 text-xs text-gray-500">
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
           Predicted total score after each session, with the estimated range shaded.
         </p>
       </CardContent>

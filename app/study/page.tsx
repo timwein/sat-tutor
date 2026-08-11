@@ -46,7 +46,7 @@ export default async function StudyPage({
   return (
     <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
       <h1 className="text-2xl font-bold md:text-3xl">Study Session</h1>
-      <p className="text-gray-500">
+      <p className="text-gray-500 dark:text-gray-400">
         Start an adaptive practice session. The AI will select questions based on
         your skill levels and focus on your weakest areas.
       </p>

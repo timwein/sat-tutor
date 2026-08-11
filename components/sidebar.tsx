@@ -28,12 +28,12 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex h-full w-64 flex-col border-r bg-white">
-      <div className="flex items-center gap-2 border-b px-6 py-4">
+    <aside className="flex h-full w-64 flex-col border-r dark:border-gray-800 bg-white dark:bg-gray-900">
+      <div className="flex items-center gap-2 border-b dark:border-gray-800 px-6 py-4">
         <GraduationCap className="h-8 w-8 text-blue-600" />
         <div>
-          <h1 className="text-lg font-bold text-gray-900">SAT Tutor Pro</h1>
-          <p className="text-xs text-gray-500">AI-Powered Prep</p>
+          <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100">SAT Tutor Pro</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400">AI-Powered Prep</p>
         </div>
       </div>
 
@@ -50,8 +50,8 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
-                  ? 'bg-blue-50 text-blue-700'
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
               )}
             >
               <item.icon className="h-5 w-5" />
@@ -64,21 +64,21 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="border-t px-3 py-4">
+      <div className="border-t dark:border-gray-800 px-3 py-4">
         <div className="flex items-center justify-between rounded-lg px-3 py-2">
-          <span className="text-sm font-medium text-gray-600">Theme</span>
-          <ThemeToggle className="text-gray-500 hover:text-gray-800" />
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Theme</span>
+          <ThemeToggle className="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100" />
         </div>
         <Link
           href="/settings"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <SettingsIcon className="h-5 w-5" />
           Settings
         </Link>
         <Link
           href="/parent"
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100"
+          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
         >
           <Users className="h-5 w-5" />
           Parent Dashboard

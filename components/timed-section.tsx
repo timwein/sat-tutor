@@ -352,7 +352,7 @@ export function TimedSection({
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-500">Loading questions...</p>
+          <p className="text-gray-500 dark:text-gray-400">Loading questions...</p>
         </div>
       </div>
     );
@@ -367,7 +367,7 @@ export function TimedSection({
         <Card className="max-w-md">
           <CardContent className="flex flex-col items-center gap-4 pt-6">
             <AlertTriangle className="h-10 w-10 text-red-500" />
-            <p className="text-center text-sm text-red-700">
+            <p className="text-center text-sm text-red-700 dark:text-red-400">
               {errorMessage || 'An unexpected error occurred.'}
             </p>
             <Button onClick={handleRetry}>Try Again</Button>
@@ -385,7 +385,7 @@ export function TimedSection({
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <Loader2 className="mx-auto mb-4 h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-gray-500">Submitting your answers...</p>
+          <p className="text-gray-500 dark:text-gray-400">Submitting your answers...</p>
         </div>
       </div>
     );
@@ -401,7 +401,7 @@ export function TimedSection({
       {/* ================================================================= */}
       {/* Top Bar: Timer (left) + Navigator (right)                          */}
       {/* ================================================================= */}
-      <div className="flex items-start justify-between border-b bg-white px-4 py-3">
+      <div className="flex items-start justify-between border-b bg-white dark:bg-gray-900 px-4 py-3">
         {/* Timer */}
         <CountdownTimer
           totalSeconds={timeLimitSeconds}
@@ -431,10 +431,10 @@ export function TimedSection({
           <div className="w-[40%] shrink-0 overflow-y-auto border-r p-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm text-gray-500">Passage</CardTitle>
+                <CardTitle className="text-sm text-gray-500 dark:text-gray-400">Passage</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose prose-sm max-w-none text-gray-700">
+                <div className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300">
                   <SelfAnnotatingPassage text={currentQuestion!.passage_text!} />
                 </div>
               </CardContent>

@@ -163,14 +163,14 @@ export function AnnotatablePassage({
       <div
         ref={containerRef}
         onMouseUp={handleMouseUp}
-        className="prose prose-sm max-w-none whitespace-pre-wrap leading-relaxed text-gray-800"
+        className="prose prose-sm max-w-none whitespace-pre-wrap leading-relaxed text-gray-800 dark:text-gray-100"
       >
         {renderAnnotatedText()}
       </div>
 
       {toolbar && (
         <div
-          className="absolute z-40 flex items-center gap-1 rounded-lg border bg-white px-2 py-1 shadow-lg"
+          className="absolute z-40 flex items-center gap-1 rounded-lg border bg-white dark:bg-gray-900 px-2 py-1 shadow-lg"
           style={{
             top: toolbar.top,
             left: toolbar.left,
@@ -190,7 +190,7 @@ export function AnnotatablePassage({
             variant="ghost"
             size="xs"
             onClick={() => addAnnotation('underline')}
-            className="gap-1 text-blue-600 hover:bg-blue-50"
+            className="gap-1 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40"
           >
             <Underline className="h-3.5 w-3.5" />
             Underline

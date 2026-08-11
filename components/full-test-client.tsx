@@ -115,14 +115,14 @@ export function FullTestClient({
         <div className="flex flex-col items-center gap-2 text-center">
           <Trophy className="h-10 w-10 text-amber-500" />
           <h1 className="text-2xl font-bold">Practice Test Complete</h1>
-          <p className="text-gray-500">Full-length digital SAT simulation finished.</p>
+          <p className="text-gray-500 dark:text-gray-400">Full-length digital SAT simulation finished.</p>
         </div>
 
-        <Card className="border-blue-200 bg-blue-50">
+        <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/40">
           <CardContent className="py-6 text-center">
-            <p className="text-sm font-medium text-blue-700">Estimated Score</p>
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Estimated Score</p>
             <p className="text-5xl font-bold text-blue-900">{total ?? '--'}</p>
-            <p className="mt-1 text-sm text-blue-700">
+            <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
               R/W: {rw ?? '--'} · Math: {math ?? '--'}
             </p>
             <p className="mt-2 text-xs text-blue-600">
@@ -144,7 +144,7 @@ export function FullTestClient({
                   className="flex items-center justify-between rounded-lg border px-4 py-3 text-sm"
                 >
                   <span className="font-medium">{def?.label ?? r.module_id}</span>
-                  <span className="text-gray-600">
+                  <span className="text-gray-600 dark:text-gray-300">
                     {r.correct}/{r.total} · {Math.round(r.accuracy * 100)}% ·{' '}
                     {Math.round(r.time_used_seconds / 60)} min
                   </span>
@@ -183,11 +183,11 @@ export function FullTestClient({
             <p className="text-5xl font-bold tabular-nums">
               {minutes}:{seconds.toString().padStart(2, '0')}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Reading &amp; Writing is done. Stand up, stretch, get water - just like
               the real test&apos;s 10-minute break. Math starts next.
             </p>
-            <div className="rounded-lg bg-gray-50 p-3 text-left text-xs text-gray-500">
+            <div className="rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 text-left text-xs text-gray-500 dark:text-gray-400">
               Completed so far:{' '}
               {stageResults.map((r) => `${getModuleById(r.module_id)?.label}: ${r.correct}/${r.total}`).join(' · ')}
             </div>
@@ -228,7 +228,7 @@ export function FullTestClient({
 
   return (
     <div className="space-y-2">
-      <p className="px-4 pt-3 text-center text-xs font-medium uppercase tracking-wide text-gray-400">
+      <p className="px-4 pt-3 text-center text-xs font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500">
         Full Practice Test · Stage {moduleNumber} of 4 · {moduleDef.label}
       </p>
       <TimedSection

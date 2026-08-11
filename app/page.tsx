@@ -86,19 +86,19 @@ export default async function DashboardPage() {
     <div className="mx-auto max-w-6xl space-y-6 md:space-y-8">
       {/* Welcome header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 md:text-3xl">
           Welcome back{student?.name ? `, ${student.name.split(' ')[0]}` : ''}
         </h1>
-        <p className="mt-1 text-gray-500">
+        <p className="mt-1 text-gray-500 dark:text-gray-400">
           Keep up the momentum. Your next study session is waiting.
         </p>
       </div>
 
       {/* Score Prediction Widget */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/40">
         <CardHeader>
           <CardTitle className="text-blue-900">Predicted SAT Score</CardTitle>
-          <CardDescription className="text-blue-700">
+          <CardDescription className="text-blue-700 dark:text-blue-300">
             Based on your performance data
           </CardDescription>
         </CardHeader>
@@ -120,24 +120,24 @@ export default async function DashboardPage() {
                     )}
                     {delta < 0 && (
                       <>
-                        <ArrowDown className="h-4 w-4 text-red-600" />
-                        <span className="text-red-600">{delta}</span>
+                        <ArrowDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <span className="text-red-600 dark:text-red-400">{delta}</span>
                       </>
                     )}
                     {delta === 0 && (
                       <>
-                        <Minus className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-400">No change</span>
+                        <Minus className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-gray-400 dark:text-gray-500">No change</span>
                       </>
                     )}
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-sm text-blue-700">
+              <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
                 Range: {prediction.total_score_low} &ndash;{' '}
                 {prediction.total_score_high}
               </p>
-              <p className="mt-1 text-sm text-blue-700">
+              <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
                 R/W: {prediction.rw_score} | Math: {prediction.math_score}
               </p>
             </>
@@ -147,7 +147,7 @@ export default async function DashboardPage() {
                 <span className="text-4xl font-bold text-blue-900 md:text-5xl">--</span>
                 <span className="text-lg text-blue-600">/ 1600</span>
               </div>
-              <p className="mt-2 text-sm text-blue-700">
+              <p className="mt-2 text-sm text-blue-700 dark:text-blue-300">
                 Complete more practice sessions to generate your score prediction.
               </p>
             </>
@@ -162,7 +162,7 @@ export default async function DashboardPage() {
             <CardContent className="flex flex-col items-center gap-3 pt-6">
               <BookOpen className="h-10 w-10 text-blue-600" />
               <h3 className="font-semibold">Start Studying</h3>
-              <p className="text-center text-sm text-gray-500">
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 Adaptive practice session
               </p>
             </CardContent>
@@ -176,7 +176,7 @@ export default async function DashboardPage() {
               <h3 className="font-semibold">
                 Insights <Badge variant="secondary" className="ml-1">&#9733;</Badge>
               </h3>
-              <p className="text-center text-sm text-gray-500">
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 Wrong answer intelligence
               </p>
             </CardContent>
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
             <CardContent className="flex flex-col items-center gap-3 pt-6">
               <BarChart3 className="h-10 w-10 text-green-600" />
               <h3 className="font-semibold">My Progress</h3>
-              <p className="text-center text-sm text-gray-500">
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 Analytics and skill map
               </p>
             </CardContent>
@@ -207,7 +207,7 @@ export default async function DashboardPage() {
                   </span>
                 )}
               </h3>
-              <p className="text-center text-sm text-gray-500">
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 Spaced repetition
               </p>
             </CardContent>
@@ -227,7 +227,7 @@ export default async function DashboardPage() {
               <span className="text-4xl font-bold">
                 {streakData.currentStreak}
               </span>
-              <span className="text-gray-500">days</span>
+              <span className="text-gray-500 dark:text-gray-400">days</span>
               {streakData.currentStreak > 0 && (
                 <Flame className="h-6 w-6 text-orange-500" />
               )}
@@ -237,7 +237,7 @@ export default async function DashboardPage() {
                 {'\uD83C\uDFAF'} {streakData.milestoneReached}-day milestone!
               </p>
             ) : streakData.currentStreak === 0 ? (
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 Complete a study session to start your streak!
               </p>
             ) : null}
@@ -250,7 +250,7 @@ export default async function DashboardPage() {
             <CardTitle>This Week</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 text-sm text-gray-600">
+            <div className="space-y-3 text-sm text-gray-600 dark:text-gray-300">
               <div className="flex justify-between">
                 <span>Questions answered</span>
                 <span className="font-medium">{weeklyStats.questionsAnswered}</span>

@@ -22,8 +22,8 @@ export default async function PracticeTestSessionPage({
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800">Session Not Found</h1>
-          <p className="mt-2 text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Session Not Found</h1>
+          <p className="mt-2 text-gray-500 dark:text-gray-400">
             This practice test session could not be found.
           </p>
           <a
@@ -77,8 +77,8 @@ export default async function PracticeTestSessionPage({
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-800">Invalid Session</h1>
-          <p className="mt-2 text-gray-500">
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">Invalid Session</h1>
+          <p className="mt-2 text-gray-500 dark:text-gray-400">
             This session is missing required configuration data.
           </p>
           <a

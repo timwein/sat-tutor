@@ -17,7 +17,7 @@ export function BottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t dark:border-gray-800 bg-white dark:bg-gray-900 md:hidden">
       <div className="flex">
         {tabs.map((tab) => {
           const isActive =
@@ -30,11 +30,11 @@ export function BottomNav() {
               className={cn(
                 'flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors',
                 isActive
-                  ? 'text-blue-600'
-                  : 'text-gray-500 active:text-gray-700'
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-500 dark:text-gray-400 active:text-gray-700 dark:active:text-gray-300'
               )}
             >
-              <tab.icon className={cn('h-6 w-6', isActive && 'text-blue-600')} />
+              <tab.icon className={cn('h-6 w-6', isActive && 'text-blue-600 dark:text-blue-400')} />
               {tab.label}
             </Link>
           );

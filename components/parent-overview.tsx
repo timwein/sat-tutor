@@ -16,10 +16,10 @@ interface ParentOverviewProps {
 }
 
 const MASTERY_BADGE_STYLES: Record<string, string> = {
-  Developing: 'bg-red-100 text-red-800 border-red-200',
+  Developing: 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border-red-200',
   Progressing: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  Proficient: 'bg-blue-100 text-blue-800 border-blue-200',
-  Mastered: 'bg-green-100 text-green-800 border-green-200',
+  Proficient: 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200',
+  Mastered: 'bg-green-100 dark:bg-green-950/60 text-green-800 dark:text-green-300 border-green-200',
 };
 
 export function ParentOverview({ data }: ParentOverviewProps) {
@@ -29,10 +29,10 @@ export function ParentOverview({ data }: ParentOverviewProps) {
   return (
     <div className="space-y-6">
       {/* Score Prediction Card */}
-      <Card className="border-blue-200 bg-blue-50">
+      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/40">
         <CardHeader>
           <CardTitle className="text-blue-900">Predicted SAT Score</CardTitle>
-          <CardDescription className="text-blue-700">
+          <CardDescription className="text-blue-700 dark:text-blue-300">
             Based on your student&apos;s performance data
           </CardDescription>
         </CardHeader>
@@ -56,26 +56,26 @@ export function ParentOverview({ data }: ParentOverviewProps) {
                     )}
                     {scoreTrend.direction === 'down' && (
                       <>
-                        <ArrowDown className="h-4 w-4 text-red-600" />
-                        <span className="text-red-600">
+                        <ArrowDown className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        <span className="text-red-600 dark:text-red-400">
                           {scoreTrend.delta}
                         </span>
                       </>
                     )}
                     {scoreTrend.direction === 'flat' && (
                       <>
-                        <Minus className="h-4 w-4 text-gray-400" />
-                        <span className="text-gray-400">No change</span>
+                        <Minus className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                        <span className="text-gray-400 dark:text-gray-500">No change</span>
                       </>
                     )}
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-sm text-blue-700">
+              <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
                 Range: {scorePrediction.total_score_low} &ndash;{' '}
                 {scorePrediction.total_score_high}
               </p>
-              <p className="mt-1 text-sm text-blue-700">
+              <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
                 R/W: {scorePrediction.rw_score} | Math:{' '}
                 {scorePrediction.math_score}
               </p>
@@ -86,7 +86,7 @@ export function ParentOverview({ data }: ParentOverviewProps) {
                 <span className="text-5xl font-bold text-blue-900">--</span>
                 <span className="text-lg text-blue-600">/ 1600</span>
               </div>
-              <p className="mt-2 text-sm text-blue-700">
+              <p className="mt-2 text-sm text-blue-700 dark:text-blue-300">
                 Not enough data for a score prediction yet.
               </p>
             </>
@@ -100,14 +100,14 @@ export function ParentOverview({ data }: ParentOverviewProps) {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Clock className="h-4 w-4 text-gray-500" />
+              <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               Study Time
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">This week</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">This week</span>
                 <span className="text-sm font-semibold">
                   {studyTime.thisWeekMinutes < 60
                     ? `${studyTime.thisWeekMinutes} min`
@@ -115,7 +115,7 @@ export function ParentOverview({ data }: ParentOverviewProps) {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">This month</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">This month</span>
                 <span className="text-sm font-semibold">
                   {studyTime.thisMonthMinutes < 60
                     ? `${studyTime.thisMonthMinutes} min`
@@ -134,14 +134,14 @@ export function ParentOverview({ data }: ParentOverviewProps) {
           <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">This week</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">This week</span>
                 <span className="text-sm font-semibold">
                   {sessionFrequency.thisWeek}{' '}
                   {sessionFrequency.thisWeek === 1 ? 'session' : 'sessions'}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm text-gray-600">This month</span>
+                <span className="text-sm text-gray-600 dark:text-gray-300">This month</span>
                 <span className="text-sm font-semibold">
                   {sessionFrequency.thisMonth}{' '}
                   {sessionFrequency.thisMonth === 1 ? 'session' : 'sessions'}
@@ -162,7 +162,7 @@ export function ParentOverview({ data }: ParentOverviewProps) {
         </CardHeader>
         <CardContent>
           {topWeaknesses.length === 0 ? (
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               No calibrated skills yet. More practice is needed.
             </p>
           ) : (
@@ -176,16 +176,16 @@ export function ParentOverview({ data }: ParentOverviewProps) {
                     <p className="text-sm font-medium">{w.skillName}</p>
                     <Badge
                       variant="outline"
-                      className="text-xs text-gray-600"
+                      className="text-xs text-gray-600 dark:text-gray-300"
                     >
                       {w.domain}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       Elo {w.elo}
                     </span>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
                       {w.accuracy}% acc
                     </span>
                     <Badge

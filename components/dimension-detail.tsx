@@ -20,9 +20,9 @@ interface DimensionDetailProps {
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
-  high: 'bg-red-100 text-red-700',
-  medium: 'bg-amber-100 text-amber-700',
-  low: 'bg-blue-100 text-blue-700',
+  high: 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300',
+  medium: 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300',
+  low: 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300',
 };
 
 function TrendIndicator({ trend }: { trend: DimensionDetailType['trend'] }) {
@@ -36,7 +36,7 @@ function TrendIndicator({ trend }: { trend: DimensionDetailType['trend'] }) {
       );
     case 'worsening':
       return (
-        <span className="flex items-center gap-1 text-sm text-red-600">
+        <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
           <ArrowDown className="h-4 w-4" />
           Worsening
         </span>
@@ -44,7 +44,7 @@ function TrendIndicator({ trend }: { trend: DimensionDetailType['trend'] }) {
     case 'stagnant':
     default:
       return (
-        <span className="flex items-center gap-1 text-sm text-gray-500">
+        <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
           <ArrowRight className="h-4 w-4" />
           Stagnant
         </span>
@@ -65,7 +65,7 @@ export function DimensionDetail({
           <CardTitle>{dimensionLabel}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             No data available for this dimension.
           </p>
         </CardContent>
@@ -91,17 +91,17 @@ export function DimensionDetail({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-gray-700">{detail.finding}</p>
+        <p className="text-gray-700 dark:text-gray-300">{detail.finding}</p>
 
-        <div className="rounded-lg bg-blue-50 p-3">
-          <p className="text-sm text-blue-800">
+        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
             <span className="font-semibold">Recommendation: </span>
             {detail.recommendation}
           </p>
         </div>
 
         <div className="flex items-start gap-1">
-          <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-500" />
+          <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-400" />
           <EvidenceList
             questionIds={detail.evidence_question_ids}
             evidenceMap={evidenceMap ?? {}}

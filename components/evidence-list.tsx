@@ -29,7 +29,7 @@ export function EvidenceList({ questionIds, evidenceMap }: EvidenceListProps) {
 
   if (resolved.length === 0) {
     return (
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-500 dark:text-gray-400">
         Based on {questionIds.length} question{questionIds.length !== 1 ? 's' : ''}
       </p>
     );
@@ -37,13 +37,13 @@ export function EvidenceList({ questionIds, evidenceMap }: EvidenceListProps) {
 
   return (
     <details className="group text-sm">
-      <summary className="cursor-pointer text-xs font-medium text-blue-700 hover:underline">
+      <summary className="cursor-pointer text-xs font-medium text-blue-700 dark:text-blue-300 hover:underline">
         Based on {resolved.length} question{resolved.length !== 1 ? 's' : ''} — view them
       </summary>
       <ul className="mt-2 space-y-2">
         {resolved.map((q) => (
-          <li key={q.question_id} className="rounded-lg border bg-gray-50 px-3 py-2">
-            <p className="line-clamp-2 text-xs text-gray-700">{q.question_text}</p>
+          <li key={q.question_id} className="rounded-lg border bg-gray-50 dark:bg-gray-800/60 px-3 py-2">
+            <p className="line-clamp-2 text-xs text-gray-700 dark:text-gray-300">{q.question_text}</p>
             <Badge variant="outline" className="mt-1 text-[10px]">
               {skillNames.get(q.sub_skill_id) ?? q.sub_skill_id}
             </Badge>

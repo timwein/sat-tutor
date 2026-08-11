@@ -13,9 +13,9 @@ interface ParentAlertsProps {
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
-  info: 'bg-blue-100 text-blue-800 border-blue-200',
-  warning: 'bg-amber-100 text-amber-800 border-amber-200',
-  critical: 'bg-red-100 text-red-800 border-red-200',
+  info: 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200',
+  warning: 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200',
+  critical: 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border-red-200',
 };
 
 const ALERT_TYPE_ICONS: Record<string, typeof CalendarX2> = {
@@ -73,10 +73,10 @@ export function ParentAlerts({ alerts, onAlertDismissed }: ParentAlertsProps) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <Trophy className="mb-4 h-12 w-12 text-green-400" />
-        <h3 className="text-lg font-medium text-gray-900">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
           No alerts - everything looks great!
         </h3>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           We&apos;ll notify you about study gaps, skill regressions, and
           milestones.
         </p>
@@ -93,8 +93,8 @@ export function ParentAlerts({ alerts, onAlertDismissed }: ParentAlertsProps) {
         return (
           <Card key={alert.id}>
             <CardContent className="flex items-start gap-4 pt-4">
-              <div className="mt-0.5 rounded-lg bg-gray-100 p-2">
-                <Icon className="h-5 w-5 text-gray-600" />
+              <div className="mt-0.5 rounded-lg bg-gray-100 dark:bg-gray-800 p-2">
+                <Icon className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               </div>
 
               <div className="flex-1 space-y-1">
@@ -105,12 +105,12 @@ export function ParentAlerts({ alerts, onAlertDismissed }: ParentAlertsProps) {
                   >
                     {alert.severity}
                   </Badge>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
                     {getRelativeTime(alert.created_at)}
                   </span>
                 </div>
                 <h4 className="text-sm font-medium">{alert.title}</h4>
-                <p className="text-sm text-gray-600">{alert.description}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{alert.description}</p>
               </div>
 
               <Button
@@ -118,7 +118,7 @@ export function ParentAlerts({ alerts, onAlertDismissed }: ParentAlertsProps) {
                 size="sm"
                 onClick={() => handleDismiss(alert.id)}
                 disabled={isDismissing}
-                className="shrink-0 text-gray-500"
+                className="shrink-0 text-gray-500 dark:text-gray-400"
               >
                 {isDismissing ? 'Dismissing...' : 'Dismiss'}
               </Button>

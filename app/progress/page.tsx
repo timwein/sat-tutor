@@ -54,7 +54,7 @@ export default async function ProgressPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 md:space-y-6">
       <h1 className="text-2xl font-bold md:text-3xl">My Progress</h1>
-      <p className="text-gray-500">Track your skill development across all SAT sub-skills.</p>
+      <p className="text-gray-500 dark:text-gray-400">Track your skill development across all SAT sub-skills.</p>
 
       {/* Stats cards row */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -64,14 +64,14 @@ export default async function ProgressPage() {
             {prediction ? (
               <>
                 <span className="text-3xl font-bold">{prediction.total_score_mid}</span>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {prediction.total_score_low} - {prediction.total_score_high}
                 </p>
               </>
             ) : (
               <>
-                <span className="text-3xl font-bold text-gray-400">--</span>
-                <p className="mt-1 text-xs text-gray-500">Not enough data yet</p>
+                <span className="text-3xl font-bold text-gray-400 dark:text-gray-500">--</span>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Not enough data yet</p>
               </>
             )}
           </CardContent>
@@ -86,7 +86,7 @@ export default async function ProgressPage() {
             {overallAccuracy !== null ? (
               <span className="text-3xl font-bold">{overallAccuracy}%</span>
             ) : (
-              <span className="text-3xl font-bold text-gray-400">--</span>
+              <span className="text-3xl font-bold text-gray-400 dark:text-gray-500">--</span>
             )}
           </CardContent>
         </Card>

@@ -26,16 +26,16 @@ interface SkillMapProps {
 }
 
 const MASTERY_STYLES: Record<string, string> = {
-  Developing: 'bg-red-100 border-red-300 text-red-800',
-  Progressing: 'bg-amber-100 border-amber-300 text-amber-800',
-  Proficient: 'bg-blue-100 border-blue-300 text-blue-800',
+  Developing: 'bg-red-100 dark:bg-red-950/60 border-red-300 text-red-800 dark:text-red-300',
+  Progressing: 'bg-amber-100 dark:bg-amber-950/60 border-amber-300 text-amber-800 dark:text-amber-300',
+  Proficient: 'bg-blue-100 dark:bg-blue-950/60 border-blue-300 text-blue-800 dark:text-blue-300',
   Mastered: 'bg-yellow-50 border-yellow-400 text-yellow-800 ring-1 ring-yellow-300',
-  'Not Started': 'bg-gray-50 border-gray-200 text-gray-500',
+  'Not Started': 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400',
 };
 
 const TREE_STATUS_STYLES: Record<SkillTreeStatus, string> = {
-  locked: 'bg-gray-100 border-gray-200 text-gray-400 opacity-60',
-  available: 'bg-gray-50 border-gray-200 text-gray-500 ring-2 ring-blue-300 animate-pulse-ring',
+  locked: 'bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 opacity-60',
+  available: 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 ring-2 ring-blue-300 animate-pulse-ring',
   in_progress: '', // handled by mastery level styles
   mastered: 'bg-yellow-50 border-yellow-400 text-yellow-800 ring-1 ring-yellow-300',
 };

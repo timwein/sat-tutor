@@ -43,7 +43,7 @@ export function QuestionCard({
           <div className="flex items-center gap-3">
             <Badge variant="secondary">{subSkillId}</Badge>
             {isAiGenerated && (
-              <Badge variant="outline" className="border-amber-300 text-amber-700">
+              <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-300">
                 AI-Generated
               </Badge>
             )}
@@ -66,7 +66,7 @@ export function QuestionCard({
       </CardHeader>
       <CardContent>
         {passageText && (
-          <div className="mb-4 max-h-40 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 p-3 text-sm text-gray-700 md:max-h-60 md:p-4">
+          <div className="mb-4 max-h-40 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 dark:bg-gray-800/60 p-3 text-sm text-gray-700 dark:text-gray-300 md:max-h-60 md:p-4">
             <SelfAnnotatingPassage text={passageText} />
           </div>
         )}

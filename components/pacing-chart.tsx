@@ -34,12 +34,12 @@ function CustomTooltip({
 
   const data = payload[0].payload;
   return (
-    <div className="rounded-lg border bg-white px-3 py-2 shadow-sm">
+    <div className="rounded-lg border bg-white dark:bg-gray-900 px-3 py-2 shadow-sm">
       <p className="text-sm font-medium">
         Question {data.questionNumber}: {data.timeSpentSeconds}s
       </p>
       <p
-        className={`text-xs ${data.isCorrect ? 'text-green-600' : 'text-red-600'}`}
+        className={`text-xs ${data.isCorrect ? 'text-green-600' : 'text-red-600 dark:text-red-400'}`}
       >
         {data.isCorrect ? 'Correct' : 'Wrong'}
       </p>

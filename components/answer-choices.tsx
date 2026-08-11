@@ -43,10 +43,10 @@ export function AnswerChoices({
               onClick={() => onSelect(letter)}
               className={cn(
                 'flex w-full items-center gap-3 rounded-lg border px-3 py-3.5 text-left transition-colors md:px-4 md:py-3',
-                'bg-white hover:bg-gray-50',
-                isSelected && !showResult && 'border-blue-500 bg-blue-50',
-                isCorrect && 'border-green-500 bg-green-50',
-                isWrongSelected && 'border-red-500 bg-red-50',
+                'bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800/60',
+                isSelected && !showResult && 'border-blue-500 bg-blue-50 dark:bg-blue-950/40',
+                isCorrect && 'border-green-500 bg-green-50 dark:bg-green-950/40',
+                isWrongSelected && 'border-red-500 bg-red-50 dark:bg-red-950/40',
                 isCrossedOut && 'opacity-50',
                 disabled && 'cursor-not-allowed'
               )}
@@ -54,11 +54,11 @@ export function AnswerChoices({
               <span
                 className={cn(
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-bold text-sm',
-                  'border bg-white',
-                  isSelected && !showResult && 'border-blue-500 bg-blue-100 text-blue-700',
-                  isCorrect && 'border-green-500 bg-green-100 text-green-700',
-                  isWrongSelected && 'border-red-500 bg-red-100 text-red-700',
-                  !isSelected && !isCorrect && !isWrongSelected && 'border-gray-300 text-gray-600'
+                  'border bg-white dark:bg-gray-900',
+                  isSelected && !showResult && 'border-blue-500 bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300',
+                  isCorrect && 'border-green-500 bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300',
+                  isWrongSelected && 'border-red-500 bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300',
+                  !isSelected && !isCorrect && !isWrongSelected && 'border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300'
                 )}
               >
                 {letter}
@@ -66,7 +66,7 @@ export function AnswerChoices({
               <span
                 className={cn(
                   'flex-1 text-sm',
-                  isCrossedOut && 'line-through text-gray-400'
+                  isCrossedOut && 'line-through text-gray-400 dark:text-gray-500'
                 )}
               >
                 {text}
@@ -80,7 +80,7 @@ export function AnswerChoices({
                 onToggleCrossOut(letter);
               }}
               className={cn(
-                'flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-400 transition-opacity hover:bg-gray-100 hover:text-gray-600 md:h-6 md:w-6',
+                'flex h-8 w-8 shrink-0 items-center justify-center rounded text-gray-400 dark:text-gray-500 transition-opacity hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300 md:h-6 md:w-6',
                 isCrossedOut
                   ? 'opacity-100'
                   : 'opacity-100 md:opacity-0 md:group-hover:opacity-100',

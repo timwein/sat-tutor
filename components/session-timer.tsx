@@ -60,29 +60,29 @@ export function SessionTimer({
   const isOverTime = elapsedMinutes >= maxMinutes;
 
   return (
-    <div className="border-b bg-white px-3 py-2 md:px-6 md:py-3">
+    <div className="border-b bg-white dark:bg-gray-900 px-3 py-2 md:px-6 md:py-3">
       {/* Desktop: single row (unchanged) */}
       <div className="hidden md:flex md:items-center md:justify-between">
         {/* Left: Timer */}
         <div className="flex items-center gap-2 text-sm">
-          <Clock className="h-4 w-4 text-gray-500" />
-          <span className={isOverTime ? 'font-medium text-red-600' : 'text-gray-700'}>
+          <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+          <span className={isOverTime ? 'font-medium text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}>
             {formatElapsed(elapsedSeconds)}
           </span>
-          <span className="text-gray-400">/ {maxMinutes}:00</span>
+          <span className="text-gray-400 dark:text-gray-500">/ {maxMinutes}:00</span>
         </div>
 
         {/* Center: Progress */}
         <div className="flex flex-1 items-center gap-3 px-8">
           <Progress value={progressPercent} className="flex-1" />
-          <span className="whitespace-nowrap text-sm text-gray-600">
+          <span className="whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
             {questionsAnswered} / {maxQuestions} questions
           </span>
         </div>
 
         {/* Right: Accuracy, Phase, End button */}
         <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-gray-600 dark:text-gray-300">
             Accuracy:{' '}
             <span className="font-medium">
               {accuracy != null ? `${accuracy}%` : '--'}
@@ -100,11 +100,11 @@ export function SessionTimer({
         {/* Row 1: Timer + End button */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
-            <Clock className="h-4 w-4 text-gray-500" />
-            <span className={isOverTime ? 'font-medium text-red-600' : 'text-gray-700'}>
+            <Clock className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <span className={isOverTime ? 'font-medium text-red-600 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}>
               {formatElapsed(elapsedSeconds)}
             </span>
-            <span className="text-gray-400">/ {maxMinutes}:00</span>
+            <span className="text-gray-400 dark:text-gray-500">/ {maxMinutes}:00</span>
           </div>
           <Button variant="outline" size="sm" onClick={onEndSession}>
             End
@@ -114,7 +114,7 @@ export function SessionTimer({
         {/* Row 2: Progress bar + question count */}
         <div className="flex items-center gap-2">
           <Progress value={progressPercent} className="flex-1" />
-          <span className="whitespace-nowrap text-xs text-gray-500">
+          <span className="whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
             {questionsAnswered}/{maxQuestions}
           </span>
         </div>

@@ -12,9 +12,9 @@ export function DesmosCalculator({ isOpen, onToggle }: DesmosCalculatorProps) {
   return (
     <div className="fixed bottom-4 right-4 z-50">
       {isOpen ? (
-        <div className="flex flex-col rounded-lg border bg-white shadow-xl">
+        <div className="flex flex-col rounded-lg border bg-white dark:bg-gray-900 shadow-xl">
           <div className="flex items-center justify-between border-b px-3 py-2">
-            <span className="text-sm font-medium text-gray-700">Calculator</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Calculator</span>
             <Button
               variant="ghost"
               size="icon-xs"

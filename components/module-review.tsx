@@ -24,10 +24,10 @@ interface ModuleReviewProps {
 }
 
 const MASTERY_COLORS: Record<MasteryLevel, string> = {
-  Developing: 'bg-red-100 text-red-700',
-  Progressing: 'bg-amber-100 text-amber-700',
-  Proficient: 'bg-blue-100 text-blue-700',
-  Mastered: 'bg-green-100 text-green-700',
+  Developing: 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300',
+  Progressing: 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300',
+  Proficient: 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300',
+  Mastered: 'bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300',
 };
 
 const SECTION_LABELS: Record<string, string> = {
@@ -56,7 +56,7 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                 {SECTION_LABELS[result.section] ?? result.section} &mdash;{' '}
                 {result.moduleId}
               </CardTitle>
-              <p className="mt-1 text-sm text-gray-500">
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {result.totalCorrect} of {result.totalQuestions} correct &middot;{' '}
                 {Math.round(result.totalTimeUsedSeconds / 60)}m{' '}
                 {result.totalTimeUsedSeconds % 60}s used of{' '}
@@ -71,12 +71,12 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                     ? 'text-green-600'
                     : accuracyPercent >= 60
                       ? 'text-amber-600'
-                      : 'text-red-600'
+                      : 'text-red-600 dark:text-red-400'
                 )}
               >
                 {accuracyPercent}%
               </p>
-              <p className="text-xs text-gray-500">Accuracy</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Accuracy</p>
             </div>
           </div>
         </CardHeader>
@@ -94,7 +94,7 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                 key={update.sub_skill_id}
                 className="flex items-center justify-between rounded-lg border px-4 py-2"
               >
-                <span className="text-sm font-medium text-gray-700">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   {update.sub_skill_name}
                 </span>
                 <div className="flex items-center gap-3">
@@ -102,8 +102,8 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                     className={cn(
                       'flex items-center gap-1 text-sm font-semibold',
                       update.delta > 0 && 'text-green-600',
-                      update.delta < 0 && 'text-red-600',
-                      update.delta === 0 && 'text-gray-500'
+                      update.delta < 0 && 'text-red-600 dark:text-red-400',
+                      update.delta === 0 && 'text-gray-500 dark:text-gray-400'
                     )}
                   >
                     {update.delta > 0 && <ArrowUp className="h-3.5 w-3.5" />}
@@ -158,31 +158,31 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                   <button
                     type="button"
                     onClick={() => toggleExpanded(index)}
-                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50"
+                    className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800/60"
                   >
-                    <span className="w-8 shrink-0 text-sm font-medium text-gray-500">
+                    <span className="w-8 shrink-0 text-sm font-medium text-gray-500 dark:text-gray-400">
                       {index + 1}
                     </span>
 
                     {qr.isCorrect ? (
-                      <Badge className="gap-1 bg-green-100 text-green-700">
+                      <Badge className="gap-1 bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300">
                         <Check className="h-3 w-3" />
                         Correct
                       </Badge>
                     ) : (
-                      <Badge className="gap-1 bg-red-100 text-red-700">
+                      <Badge className="gap-1 bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300">
                         <X className="h-3 w-3" />
                         Wrong
                       </Badge>
                     )}
 
-                    <span className="text-xs text-gray-500">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
                       {qr.timeSpentSeconds}s
                     </span>
 
-                    <span className="ml-auto flex items-center gap-2 text-sm text-gray-600">
+                    <span className="ml-auto flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
                       {!qr.isCorrect && (
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
                           {qr.studentAnswer ?? 'No answer'} &rarr;{' '}
                           {qr.correctAnswer}
                         </span>
@@ -198,9 +198,9 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                     </span>
 
                     {isExpanded ? (
-                      <ChevronUp className="h-4 w-4 shrink-0 text-gray-400" />
+                      <ChevronUp className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
                     ) : (
-                      <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" />
+                      <ChevronDown className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
                     )}
                   </button>
 
@@ -210,10 +210,10 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                       <div className="space-y-3">
                         {/* Question text */}
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                             Question
                           </p>
-                          <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+                          <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
                             {qr.question.question_text}
                           </p>
                         </div>
@@ -221,7 +221,7 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                         {/* Answer details */}
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                               Your Answer
                             </p>
                             <p
@@ -229,14 +229,14 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                                 'mt-1 text-sm font-medium',
                                 qr.isCorrect
                                   ? 'text-green-600'
-                                  : 'text-red-600'
+                                  : 'text-red-600 dark:text-red-400'
                               )}
                             >
                               {qr.studentAnswer ?? 'No answer'}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
                               Correct Answer
                             </p>
                             <p className="mt-1 text-sm font-medium text-green-600">
@@ -246,7 +246,7 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                         </div>
 
                         {/* Confidence & time */}
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
                           {qr.confidenceLevel && (
                             <span>
                               Confidence:{' '}
@@ -266,7 +266,7 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                               <div className="flex items-center gap-2">
                                 <Badge
                                   variant="outline"
-                                  className="bg-red-50 text-red-700"
+                                  className="bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-400"
                                 >
                                   {qr.errorClassification.error_type}
                                 </Badge>
@@ -274,10 +274,10 @@ export function ModuleReview({ result, onBack }: ModuleReviewProps) {
                                   {qr.errorClassification.distractor_type}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-gray-600">
+                              <p className="text-sm text-gray-600 dark:text-gray-300">
                                 {qr.errorClassification.explanation}
                               </p>
-                              <p className="text-sm italic text-gray-500">
+                              <p className="text-sm italic text-gray-500 dark:text-gray-400">
                                 What you likely thought:{' '}
                                 {qr.errorClassification.what_student_likely_thought}
                               </p>

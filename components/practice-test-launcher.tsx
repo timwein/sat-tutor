@@ -109,14 +109,14 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Practice Test</h1>
-        <p className="mt-1 text-gray-500">
+        <p className="mt-1 text-gray-500 dark:text-gray-400">
           Simulate real SAT conditions with timed sections. No hints available — just like test day.
         </p>
       </div>
 
       {/* Timed Section Cards */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-800">Timed Sections</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Timed Sections</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {SECTION_OPTIONS.map((option) => {
             const Icon = option.icon;
@@ -131,14 +131,14 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-gray-500">{option.description}</p>
-                  <div className="space-y-1 text-sm text-gray-600">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{option.description}</p>
+                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
                     <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-gray-400" />
+                      <BookOpen className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       <span>Up to {option.questionCount} questions</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
+                      <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       <span>{option.timeLimitMinutes} minutes</span>
                     </div>
                   </div>
@@ -153,7 +153,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                     {!isStarting && <ArrowRight className="ml-1 h-4 w-4" />}
                   </Button>
                   {startError && startingModule === null && (
-                    <p className="text-sm text-red-600" role="alert">
+                    <p className="text-sm text-red-600 dark:text-red-400" role="alert">
                       {startError}
                     </p>
                   )}
@@ -166,7 +166,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
 
       {/* Full Practice Test */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-800">Full Practice Test</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Full Practice Test</h2>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -176,7 +176,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 text-sm text-gray-500">
+            <div className="space-y-3 text-sm text-gray-500 dark:text-gray-400">
               <p>
                 The complete digital SAT experience: Reading &amp; Writing modules 1 and 2,
                 a 10-minute break, then Math modules 1 and 2. Module 2 difficulty adapts
@@ -190,7 +190,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                 <span>Total time</span>
                 <span>~2 hours 14 minutes</span>
               </div>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 Set aside an uninterrupted block - the timer keeps running like on test day.
               </p>
             </div>
@@ -203,7 +203,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
               {startingModule !== 'full-test' && <ArrowRight className="ml-1 h-4 w-4" />}
             </Button>
             {startError && startingModule === null && (
-              <p className="mt-2 text-sm text-red-600" role="alert">
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
                 {startError}
               </p>
             )}
@@ -214,7 +214,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
       {/* Recent Practice Sessions */}
       {recentSessions.length > 0 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Recent Practice Sessions</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Recent Practice Sessions</h2>
           <Card>
             <CardContent className="pt-6">
               <div className="space-y-2">
@@ -231,11 +231,11 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                     <button
                       key={session.id}
                       onClick={() => router.push(`/practice-test/${session.id}`)}
-                      className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                      className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60"
                     >
                       <div className="flex items-center gap-3">
                         <Badge variant="secondary">{sectionLabel}</Badge>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">
                           {new Date(session.started_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -245,15 +245,15 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-500">
+                        <span className="text-gray-500 dark:text-gray-400">
                           {session.questions_answered} questions
                         </span>
-                        <span className="text-gray-500">
+                        <span className="text-gray-500 dark:text-gray-400">
                           {session.accuracy != null
                             ? `${Math.round(session.accuracy * 100)}%`
                             : '--'}
                         </span>
-                        <ArrowRight className="h-4 w-4 text-gray-400" />
+                        <ArrowRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       </div>
                     </button>
                   );

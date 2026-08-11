@@ -67,7 +67,7 @@ export default async function InsightsPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
       <h1 className="text-2xl font-bold md:text-3xl">Wrong Answer Intelligence</h1>
-      <p className="text-gray-500">
+      <p className="text-gray-500 dark:text-gray-400">
         The AI analyzes your wrong answers across 8 dimensions to find hidden
         patterns.
       </p>

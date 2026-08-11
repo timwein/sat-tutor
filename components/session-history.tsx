@@ -18,11 +18,11 @@ const SESSION_TYPE_STYLES: Record<
 > = {
   study_session: {
     label: 'Study Session',
-    className: 'bg-blue-100 text-blue-800 border-blue-200',
+    className: 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200',
   },
   quick_drill: {
     label: 'Quick Drill',
-    className: 'bg-green-100 text-green-800 border-green-200',
+    className: 'bg-green-100 dark:bg-green-950/60 text-green-800 dark:text-green-300 border-green-200',
   },
   timed_section: {
     label: 'Timed Section',
@@ -56,7 +56,7 @@ export function SessionHistory({ sessions }: SessionHistoryProps) {
 
   if (sessions.length === 0) {
     return (
-      <div className="py-12 text-center text-gray-500">
+      <div className="py-12 text-center text-gray-500 dark:text-gray-400">
         No sessions yet. Start a study session to see your history here.
       </div>
     );
@@ -96,9 +96,9 @@ export function SessionHistory({ sessions }: SessionHistoryProps) {
                 >
                   {typeInfo.label}
                 </Badge>
-                <span className="text-sm text-gray-500">{formattedDate}</span>
+                <span className="text-sm text-gray-500 dark:text-gray-400">{formattedDate}</span>
                 {durationMinutes !== null && (
-                  <span className="flex items-center gap-1 text-sm text-gray-500">
+                  <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
                     <Clock className="size-3.5" />
                     {durationMinutes} min
                   </span>
@@ -110,11 +110,11 @@ export function SessionHistory({ sessions }: SessionHistoryProps) {
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <span>
                   <span className="font-semibold">{session.questions_correct}</span>
-                  <span className="text-gray-500">/{session.questions_answered} correct</span>
+                  <span className="text-gray-500 dark:text-gray-400">/{session.questions_answered} correct</span>
                 </span>
                 <span>
                   <span className="font-semibold">{accuracy}</span>
-                  <span className="text-gray-500"> accuracy</span>
+                  <span className="text-gray-500 dark:text-gray-400"> accuracy</span>
                 </span>
               </div>
 
@@ -139,8 +139,8 @@ export function SessionHistory({ sessions }: SessionHistoryProps) {
                   <p
                     className={
                       isExpanded
-                        ? 'text-sm text-gray-600'
-                        : 'line-clamp-2 text-sm text-gray-600'
+                        ? 'text-sm text-gray-600 dark:text-gray-300'
+                        : 'line-clamp-2 text-sm text-gray-600 dark:text-gray-300'
                     }
                   >
                     {session.summary}
@@ -148,7 +148,7 @@ export function SessionHistory({ sessions }: SessionHistoryProps) {
                   <Button
                     variant="ghost"
                     size="xs"
-                    className="mt-1 text-gray-500"
+                    className="mt-1 text-gray-500 dark:text-gray-400"
                     onClick={() => toggleExpanded(session.id)}
                   >
                     {isExpanded ? (

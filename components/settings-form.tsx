@@ -49,7 +49,7 @@ export function SettingsForm({ studentId, initialName, initialRwFocus }: Setting
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <label htmlFor="student-name" className="text-sm font-medium text-gray-700">
+            <label htmlFor="student-name" className="text-sm font-medium text-gray-700 dark:text-gray-300">
               Name
             </label>
             <Input
@@ -58,7 +58,7 @@ export function SettingsForm({ studentId, initialName, initialRwFocus }: Setting
               onChange={(e) => setName(e.target.value)}
               className="max-w-xs"
             />
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Shown in the dashboard greeting and parent reports.
             </p>
           </div>
@@ -75,13 +75,13 @@ export function SettingsForm({ studentId, initialName, initialRwFocus }: Setting
               type="checkbox"
               checked={rwFocus}
               onChange={(e) => setRwFocus(e.target.checked)}
-              className="mt-1 h-4 w-4 rounded border-gray-300"
+              className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-700"
             />
             <span>
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
                 Focus on Reading &amp; Writing
               </span>
-              <span className="block text-xs text-gray-500">
+              <span className="block text-xs text-gray-500 dark:text-gray-400">
                 Mixed study sessions will lean heavily toward Reading &amp; Writing
                 questions (roughly 3 of every 4). Quick drills and practice tests are
                 unaffected.
@@ -95,9 +95,9 @@ export function SettingsForm({ studentId, initialName, initialRwFocus }: Setting
         <Button onClick={save} disabled={saving}>
           {saving ? 'Saving...' : 'Save Settings'}
         </Button>
-        {message && <span className="text-sm text-green-700">{message}</span>}
+        {message && <span className="text-sm text-green-700 dark:text-green-400">{message}</span>}
         {error && (
-          <span className="text-sm text-red-600" role="alert">
+          <span className="text-sm text-red-600 dark:text-red-400" role="alert">
             {error}
           </span>
         )}

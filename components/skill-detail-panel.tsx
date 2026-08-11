@@ -41,10 +41,10 @@ const ALL_SKILLS = [
 ];
 
 const MASTERY_BADGE_STYLES: Record<string, string> = {
-  Developing: 'bg-red-100 text-red-700',
-  Progressing: 'bg-amber-100 text-amber-700',
-  Proficient: 'bg-blue-100 text-blue-700',
-  Mastered: 'bg-green-100 text-green-700',
+  Developing: 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300',
+  Progressing: 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300',
+  Proficient: 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300',
+  Mastered: 'bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300',
 };
 
 function lookupSkill(skillId: string) {
