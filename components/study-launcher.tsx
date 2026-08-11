@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Zap, Clock, Target } from 'lucide-react';
+import { BookOpen, Zap, Clock, Target, Dumbbell } from 'lucide-react';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import type { Session } from '@/lib/types';
 
@@ -143,6 +143,28 @@ export function StudyLauncher({ studentId, lowestRatedSkill, highlightFocus, rec
               className="w-full"
             >
               {isStarting ? 'Starting...' : 'Start Study Session'}
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Dumbbell className="h-5 w-5 text-emerald-600" />
+              Transition Gym
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Two-step transitions training: classify the logic relationship first,
+              then pick the word. The densest R/W points per practice hour.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/gym')}
+              className="shrink-0"
+            >
+              Open the Gym
             </Button>
           </CardContent>
         </Card>
