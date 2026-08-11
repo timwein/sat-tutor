@@ -5,7 +5,16 @@ import { Button } from '@/components/ui/button';
 import { createServerClient } from '@/lib/supabase';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import type { ReviewQueueItem, Question } from '@/lib/types';
-import Link from 'next/link';
+import { StartReviewButton } from '@/components/start-review-button';
+
+function formatReviewDate(dateStr: string): string {
+  const date = new Date(`${dateStr.slice(0, 10)}T00:00:00`);
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
 
 // Build a lookup map from skill id to skill name
 const allSkills = [...SKILL_TAXONOMY.reading_writing, ...SKILL_TAXONOMY.math];
@@ -86,7 +95,7 @@ export default async function ReviewPage() {
   return (
     <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
       <h1 className="text-2xl font-bold md:text-3xl">Review Queue</h1>
-      <p className="text-gray-500">
+      <p className="text-gray-500 dark:text-gray-400">
         Questions you got wrong are scheduled for spaced repetition review.
         Reviewing at the right intervals helps move knowledge into long-term
         memory.
@@ -100,10 +109,10 @@ export default async function ReviewPage() {
           {dueList.length === 0 ? (
             <div className="flex flex-col items-center py-8 text-center">
               <span className="text-5xl font-bold text-gray-300">0</span>
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
                 No questions due for review
               </p>
-              <p className="mt-1 text-xs text-gray-400">
+              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
                 Questions will appear here after you complete study sessions and
                 encounter wrong answers.
               </p>
@@ -113,7 +122,7 @@ export default async function ReviewPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {dueList.length} question{dueList.length !== 1 ? 's' : ''} due for review
               </p>
               <div className="space-y-2">
@@ -137,14 +146,14 @@ export default async function ReviewPage() {
                           {truncatedText}
                         </p>
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                          <span className="inline-block rounded-full bg-blue-100 dark:bg-blue-950/60 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
                             {subSkillName}
                           </span>
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
                             Review #{item.review_count + 1}
                           </span>
-                          <span className="text-xs text-gray-400">
-                            Due: {item.next_review_date}
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            Due: {formatReviewDate(item.next_review_date)}
                           </span>
                         </div>
                       </div>
@@ -153,9 +162,7 @@ export default async function ReviewPage() {
                 })}
               </div>
               <div className="pt-2">
-                <Link href="/study">
-                  <Button>Start Review</Button>
-                </Link>
+                <StartReviewButton studentId={studentId} />
               </div>
             </div>
           )}
@@ -174,15 +181,15 @@ export default async function ReviewPage() {
                   key={date}
                   className="flex items-center justify-between rounded-lg border px-4 py-2"
                 >
-                  <span className="text-sm font-medium">{date}</span>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm font-medium">{formatReviewDate(date)}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {items.length} question{items.length !== 1 ? 's' : ''}
                   </span>
                 </div>
               ))}
             </div>
             {totalQueueSize !== null && (
-              <p className="mt-3 text-xs text-gray-400">
+              <p className="mt-3 text-xs text-gray-400 dark:text-gray-500">
                 Total items in review queue: {totalQueueSize}
               </p>
             )}
@@ -195,7 +202,7 @@ export default async function ReviewPage() {
           <CardTitle>How Spaced Repetition Works</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm text-gray-600">
+          <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
             <p>
               When you get a question wrong, it enters your review queue:
             </p>

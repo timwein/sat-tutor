@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import Anthropic from '@anthropic-ai/sdk';
 import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
-import { MODELS } from '@/lib/claude';
+import { MODELS, classifyError } from '@/lib/claude';
+
+const VALID_ERROR_TYPES = new Set([
+  'conceptual_gap', 'procedural_error', 'careless_rush',
+  'misread_comprehension', 'trap_answer', 'time_pressure', 'knowledge_gap',
+]);
 import { predictScore } from '@/lib/score-predictor';
 import type { Session, QuestionAttempt, Question } from '@/lib/types';
 import { SKILL_TAXONOMY } from '@/lib/types';
@@ -96,6 +101,45 @@ export async function POST(
           questionsMap[q.question_id] = q;
         }
       }
+    }
+
+    // ----- Batched error classification -----
+    // Wrong answers are classified here (not per-attempt during the session)
+    // so submits stay fast; run with limited concurrency, non-fatal.
+    const toClassify = typedAttempts.filter(
+      (a) => !a.is_correct && a.student_answer !== 'SKIP' && !a.error_type && questionsMap[a.question_id]
+    );
+    const CLASSIFY_CONCURRENCY = 3;
+    for (let i = 0; i < toClassify.length; i += CLASSIFY_CONCURRENCY) {
+      const batch = toClassify.slice(i, i + CLASSIFY_CONCURRENCY);
+      await Promise.all(
+        batch.map(async (attempt) => {
+          try {
+            const classification = await classifyError({
+              question: questionsMap[attempt.question_id],
+              studentAnswer: attempt.student_answer,
+              timeSpentSeconds: attempt.time_spent_seconds,
+              confidenceLevel: attempt.confidence_level,
+            });
+            const safeErrorType = VALID_ERROR_TYPES.has(classification.error_type)
+              ? classification.error_type
+              : null;
+            attempt.error_type = safeErrorType;
+            attempt.distractor_type = classification.distractor_type;
+            attempt.error_explanation = classification.explanation;
+            await supabase
+              .from('question_attempts')
+              .update({
+                error_type: safeErrorType,
+                distractor_type: classification.distractor_type,
+                error_explanation: classification.explanation,
+              })
+              .eq('id', attempt.id);
+          } catch (classifyErr) {
+            console.error('Batch classification failed (non-fatal):', classifyErr);
+          }
+        })
+      );
     }
 
     // Build summary context
@@ -244,7 +288,38 @@ export async function POST(
       console.error('Goal progress update failed (non-fatal):', goalErr);
     }
 
-    return NextResponse.json(updatedSession as Session);
+    // Recommend an insights refresh when enough new wrong answers have
+    // accumulated since the last analysis (spec: every 5 new wrong answers).
+    let insightsRefreshRecommended = false;
+    try {
+      const { count: totalWrong } = await supabase
+        .from('question_attempts')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', student_id)
+        .eq('is_correct', false)
+        .neq('student_answer', 'SKIP');
+
+      const { data: latestInsight } = await supabase
+        .from('wrong_answer_insights')
+        .select('total_wrong_answers_analyzed')
+        .eq('student_id', student_id)
+        .order('generated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const wrongCount = totalWrong ?? 0;
+      const analyzed = latestInsight?.total_wrong_answers_analyzed ?? 0;
+      insightsRefreshRecommended = latestInsight
+        ? wrongCount - analyzed >= 5
+        : wrongCount >= 10;
+    } catch (insightErr) {
+      console.error('Insight refresh check failed (non-fatal):', insightErr);
+    }
+
+    return NextResponse.json({
+      ...(updatedSession as Session),
+      insights_refresh_recommended: insightsRefreshRecommended,
+    });
   } catch (error) {
     console.error('Session end error:', error);
     return NextResponse.json(

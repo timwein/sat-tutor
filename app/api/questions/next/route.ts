@@ -24,13 +24,14 @@ function stripToSafeQuestion(q: Question): SafeQuestion {
     passage_text: q.passage_text,
     answer_choices: q.answer_choices,
     tags: q.tags,
+    is_ai_generated: q.is_ai_generated,
   };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { session_id, student_id } = body;
+    const { session_id, student_id, prefer_strength } = body;
 
     if (!session_id || !student_id) {
       return NextResponse.json(
@@ -139,6 +140,23 @@ export async function POST(request: NextRequest) {
     }));
     const frustrationState = detectFrustration(attemptSignals);
 
+    // Record frustration signals on the session (non-fatal if it fails)
+    if (frustrationState.isFrustrated) {
+      const existingSignals = Array.isArray(typedSession.mood_signals)
+        ? typedSession.mood_signals
+        : [];
+      const entry = {
+        at: new Date().toISOString(),
+        consecutive_wrong: frustrationState.consecutiveWrong,
+        signals: frustrationState.signals,
+        recommendation: frustrationState.recommendation,
+      };
+      await supabase
+        .from('sessions')
+        .update({ mood_signals: [...existingSignals.slice(-19), entry] })
+        .eq('id', session_id);
+    }
+
     // Check if session is complete
     if (isSessionComplete(typedSession.questions_answered, elapsedMinutes, config)) {
       return NextResponse.json({
@@ -148,10 +166,95 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Load all questions from DB
-    const { data: allQuestions, error: questionsError } = await supabase
+    const attemptedQuestionIds = new Set(typedAttempts.map((a) => a.question_id));
+
+    // Review-mode session: serve the exact questions that are due for review,
+    // oldest due first. The session ends when the due list is exhausted.
+    const sessionMetadata =
+      ((session as Record<string, unknown>).metadata as Record<string, unknown> | null) ?? {};
+    if (sessionMetadata.review === true) {
+      const dueUnattempted = [...typedReviewItems]
+        .sort((a, b) => a.next_review_date.localeCompare(b.next_review_date))
+        .filter((item) => !attemptedQuestionIds.has(item.question_id));
+
+      if (dueUnattempted.length === 0) {
+        return NextResponse.json({
+          question: null,
+          selection_metadata: { reason: 'Review queue cleared - nice work!' },
+          session_ended: true,
+        });
+      }
+
+      const target = dueUnattempted[0];
+      const { data: reviewQuestion } = await supabase
+        .from('questions')
+        .select('*')
+        .eq('question_id', target.question_id)
+        .single();
+
+      if (!reviewQuestion) {
+        return NextResponse.json({
+          question: null,
+          selection_metadata: { reason: 'Review question missing from bank' },
+          session_ended: true,
+        });
+      }
+
+      return NextResponse.json({
+        question: stripToSafeQuestion(reviewQuestion as Question),
+        selection_metadata: {
+          category: 'spaced_repetition',
+          target_sub_skill: (reviewQuestion as Question).sub_skill_id,
+          target_difficulty: (reviewQuestion as Question).difficulty,
+          reason: `Review #${target.review_count + 1}, due ${target.next_review_date}`,
+          session_phase: sessionPhase,
+          frustration_state: frustrationState,
+          remaining_reviews: dueUnattempted.length - 1,
+        },
+        session_ended: false,
+      });
+    }
+
+    // Load a lightweight view of the bank for selection (no passages), then
+    // fetch the chosen question in full. Keeps payloads small as the bank grows.
+    let subSkillFocus = (session as Record<string, unknown>).sub_skill_focus as
+      | string
+      | undefined;
+
+    // "Switch to easier questions": serve from the student's strongest
+    // calibrated skill for a few questions to rebuild confidence.
+    if (prefer_strength === true && typedRatings.length > 0) {
+      const strongest = [...typedRatings]
+        .filter((r) => r.is_calibrated)
+        .sort((a, b) => b.elo_rating - a.elo_rating)[0];
+      if (strongest) subSkillFocus = strongest.sub_skill_id;
+    }
+
+    // Reading & Writing focus preference: bias mixed study sessions toward
+    // RW questions (~3 in 4) when the student has it enabled in Settings.
+    let sectionFocus: 'math' | 'reading_writing' | null = null;
+    if (!subSkillFocus && typedSession.session_type === 'study_session') {
+      const { data: studentRow } = await supabase
+        .from('students')
+        .select('settings')
+        .eq('id', student_id)
+        .single();
+      const settings = (studentRow?.settings as Record<string, unknown> | null) ?? {};
+      if (settings.rw_focus === true && Math.random() < 0.75) {
+        sectionFocus = 'reading_writing';
+      }
+    }
+
+    let lightQuery = supabase
       .from('questions')
-      .select('*');
+      .select('id, question_id, sub_skill_id, difficulty, section');
+    if (subSkillFocus) {
+      lightQuery = lightQuery.eq('sub_skill_id', subSkillFocus);
+    }
+    if (sectionFocus) {
+      lightQuery = lightQuery.eq('section', sectionFocus);
+    }
+    const { data: lightQuestions, error: questionsError } = await lightQuery;
 
     if (questionsError) {
       console.error('Failed to load questions:', questionsError);
@@ -161,10 +264,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const typedQuestions = (allQuestions || []) as Question[];
+    const typedQuestions = (lightQuestions || []) as Question[];
 
     // Filter out already-attempted questions
-    const attemptedQuestionIds = new Set(typedAttempts.map((a) => a.question_id));
     const availableQuestions = typedQuestions.filter(
       (q) => !attemptedQuestionIds.has(q.question_id)
     );
@@ -184,7 +286,8 @@ export async function POST(request: NextRequest) {
       availableQuestions,
       sessionPhase,
       isFrustrated: frustrationState.isFrustrated,
-      subSkillFocus: (session as Record<string, unknown>).sub_skill_focus as string | undefined,
+      subSkillFocus,
+      sectionFocus,
     });
 
     if (!selectionResult) {
@@ -195,8 +298,23 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Fetch the chosen question in full (passage, choices, etc.)
+    const { data: fullQuestion, error: fullError } = await supabase
+      .from('questions')
+      .select('*')
+      .eq('question_id', selectionResult.question.question_id)
+      .single();
+
+    if (fullError || !fullQuestion) {
+      console.error('Failed to load selected question:', fullError);
+      return NextResponse.json(
+        { error: 'Failed to load selected question' },
+        { status: 500 }
+      );
+    }
+
     // Strip sensitive fields for the client
-    const safeQuestion = stripToSafeQuestion(selectionResult.question);
+    const safeQuestion = stripToSafeQuestion(fullQuestion as Question);
 
     return NextResponse.json({
       question: safeQuestion,

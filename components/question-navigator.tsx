@@ -43,8 +43,8 @@ export function QuestionNavigator({
               onClick={() => onNavigate(i)}
               className={cn(
                 'h-9 w-9 p-0 text-xs font-medium',
-                isAnswered && 'bg-blue-100 text-blue-700 hover:bg-blue-200',
-                !isAnswered && 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                isAnswered && 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 hover:bg-blue-200',
+                !isAnswered && 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200',
                 isFlagged && 'border-orange-400 border-2',
                 isCurrent && 'ring-2 ring-blue-500 ring-offset-1'
               )}
@@ -55,7 +55,7 @@ export function QuestionNavigator({
         })}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-gray-600">
+      <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-300">
         <span>
           {answeredCount} answered, {flaggedCount} flagged, {remainingCount} remaining
         </span>

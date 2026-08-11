@@ -425,29 +425,29 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Upload the official College Board Bluebook practice test PDFs.
               Questions, answers, and explanations should each be in a separate
               PDF file. The system will automatically detect which file is which.
             </p>
 
             {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 {error}
               </div>
             )}
 
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Test Label</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Test Label</label>
               <input
                 type="text"
                 value={testLabel}
                 onChange={(e) => setTestLabel(e.target.value)}
                 placeholder="e.g., Practice Test 1"
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:text-sm"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:text-sm"
               />
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-gray-400 dark:text-gray-500">
                 Used to generate unique question IDs (e.g., cb_practice_test_1_rw_m1_q1)
               </p>
             </div>
@@ -457,7 +457,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 px-6 py-8 text-sm text-gray-500 transition-colors hover:border-blue-400 hover:text-blue-600"
+                className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 px-6 py-8 text-sm text-gray-500 dark:text-gray-400 transition-colors hover:border-blue-400 hover:text-blue-600"
               >
                 <FileText className="h-6 w-6" />
                 <span>Click to select PDF files</span>
@@ -466,15 +466,15 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
 
             {files.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium text-gray-700">Selected files ({files.length})</p>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Selected files ({files.length})</p>
                 {files.map((file, i) => (
                   <div key={`${file.name}-${i}`} className="flex items-center justify-between rounded-lg border px-3 py-2">
                     <div className="flex items-center gap-2 text-sm">
                       <FileText className="h-4 w-4 text-red-500" />
                       <span className="truncate">{file.name}</span>
-                      <span className="text-xs text-gray-400">({(file.size / 1024).toFixed(0)} KB)</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">({(file.size / 1024).toFixed(0)} KB)</span>
                     </div>
-                    <button type="button" onClick={() => removeFile(i)} className="text-gray-400 hover:text-gray-600">
+                    <button type="button" onClick={() => removeFile(i)} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -499,7 +499,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
           <CardTitle>Confirm PDF Types</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Verify each file is correctly identified. Change the type if needed.
           </p>
           {pdfTexts.map((pdf, i) => (
@@ -509,7 +509,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
               <select
                 value={pdf.type}
                 onChange={(e) => updatePdfType(i, e.target.value as PdfType)}
-                className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+                className="rounded-md border border-gray-300 dark:border-gray-700 px-2 py-1 text-sm"
               >
                 <option value="questions">Questions</option>
                 <option value="answers">Answers</option>
@@ -518,7 +518,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
             </div>
           ))}
           {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               {error}
             </div>
@@ -538,8 +538,8 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       <Card>
         <CardContent className="flex flex-col items-center gap-4 py-16">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          <p className="text-sm text-gray-600">{processingStatus}</p>
-          <p className="text-xs text-gray-400">Please don&apos;t close this page</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">{processingStatus}</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Please don&apos;t close this page</p>
         </CardContent>
       </Card>
     );
@@ -553,7 +553,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     return (
       <div className="space-y-4">
         {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
             <AlertTriangle className="h-4 w-4 shrink-0" />
             {error}
           </div>
@@ -565,15 +565,15 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <span className="text-2xl font-bold">{summary.total}</span>
-                <p className="text-xs text-gray-500">Questions found</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Questions found</p>
               </div>
               <div>
                 <span className="text-2xl font-bold text-green-600">{summary.matched}</span>
-                <p className="text-xs text-gray-500">Matched w/ answers</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Matched w/ answers</p>
               </div>
               <div>
                 <span className="text-2xl font-bold text-blue-600">{summary.classified}</span>
-                <p className="text-xs text-gray-500">Classified</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Classified</p>
               </div>
             </div>
             {summary.warnings.length > 0 && (
@@ -599,8 +599,8 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
           <CardContent>
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full text-sm">
-                <thead className="sticky top-0 bg-white">
-                  <tr className="border-b text-left text-xs text-gray-500">
+                <thead className="sticky top-0 bg-white dark:bg-gray-900">
+                  <tr className="border-b text-left text-xs text-gray-500 dark:text-gray-400">
                     <th className="pb-2 pr-2">#</th>
                     <th className="pb-2 pr-2">Module</th>
                     <th className="pb-2 pr-2">Sub-Skill</th>
@@ -612,7 +612,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
                 <tbody>
                   {questions.map((q, i) => (
                     <tr key={i} className="border-b last:border-0">
-                      <td className="py-1.5 pr-2 text-gray-400">{q.questionNumber}</td>
+                      <td className="py-1.5 pr-2 text-gray-400 dark:text-gray-500">{q.questionNumber}</td>
                       <td className="py-1.5 pr-2 whitespace-nowrap">
                         <Badge variant="outline" className="text-xs">{q.module}</Badge>
                       </td>
@@ -621,7 +621,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
                       </td>
                       <td className="py-1.5 pr-2">{q.difficulty}</td>
                       <td className="py-1.5 pr-2 font-medium">{q.correctAnswer}</td>
-                      <td className="py-1.5 max-w-xs truncate text-gray-600">
+                      <td className="py-1.5 max-w-xs truncate text-gray-600 dark:text-gray-300">
                         {q.questionText.slice(0, 60)}{q.questionText.length > 60 ? '...' : ''}
                       </td>
                     </tr>
@@ -649,10 +649,10 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
         <CardContent className="flex flex-col items-center gap-4 py-16">
           <CheckCircle className="h-12 w-12 text-green-600" />
           <h3 className="text-lg font-semibold">Import Complete</h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             {insertedCount} questions from &ldquo;{testLabel}&rdquo; have been imported to the question bank.
           </p>
-          <p className="text-xs text-gray-400">These questions will now appear in study sessions.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">These questions will now appear in study sessions.</p>
           <Button onClick={reset} variant="outline">Upload Another Test</Button>
         </CardContent>
       </Card>

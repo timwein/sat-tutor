@@ -5,7 +5,12 @@ import { createServerClient } from '@/lib/supabase';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import { StudyLauncher } from '@/components/study-launcher';
 
-export default async function StudyPage() {
+export default async function StudyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ focus?: string }>;
+}) {
+  const { focus } = await searchParams;
   const supabase = createServerClient();
 
   // Load the first student (no auth yet)
@@ -34,17 +39,22 @@ export default async function StudyPage() {
   const ratedSkills = (skillRatings ?? []).sort((a, b) => a.elo_rating - b.elo_rating);
   const lowestRated = ratedSkills[0]?.sub_skill_id ?? allSkills[0].id;
 
+  // ?focus=M-03 (from insight cards) preselects that skill for a targeted drill
+  const focusSkill =
+    focus && allSkills.some((s) => s.id === focus) ? focus : null;
+
   return (
     <div className="mx-auto max-w-4xl space-y-4 md:space-y-6">
       <h1 className="text-2xl font-bold md:text-3xl">Study Session</h1>
-      <p className="text-gray-500">
+      <p className="text-gray-500 dark:text-gray-400">
         Start an adaptive practice session. The AI will select questions based on
         your skill levels and focus on your weakest areas.
       </p>
 
       <StudyLauncher
         studentId={student?.id ?? ''}
-        lowestRatedSkill={lowestRated}
+        lowestRatedSkill={focusSkill ?? lowestRated}
+        highlightFocus={Boolean(focusSkill)}
         recentSessions={recentSessions ?? []}
       />
     </div>

@@ -19,7 +19,14 @@ function stripToSafe(q: Question): SafeQuestion {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, session_id, section, question_count } = body;
+    const { student_id, session_id, section, question_count, difficulty_bias } = body as {
+      student_id: string;
+      session_id: string;
+      section: string;
+      question_count: number;
+      /** Adaptive module 2: bias selection by module-1 performance */
+      difficulty_bias?: 'harder' | 'easier';
+    };
 
     if (!student_id || !session_id || !section || !question_count) {
       return NextResponse.json(
@@ -73,7 +80,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const typedQuestions = allQuestions as Question[];
+    // Exclude questions already used earlier in this session (a full test's
+    // module 2 must not repeat module 1's questions).
+    const { data: usedAttempts } = await supabase
+      .from('question_attempts')
+      .select('question_id')
+      .eq('session_id', session_id);
+    const usedIds = new Set((usedAttempts ?? []).map((a) => a.question_id));
+
+    const typedQuestions = (allQuestions as Question[]).filter(
+      (q) => !usedIds.has(q.question_id)
+    );
 
     // Select questions with difficulty spread
     // Group by difficulty, then pick proportionally
@@ -92,12 +109,39 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Pick questions proportionally across difficulties
+    // Pick questions across difficulties - proportionally by default, or
+    // biased toward harder/easier questions for the adaptive second module.
     const effectiveCount = Math.min(question_count, typedQuestions.length);
     const selected: Question[] = [];
     const difficulties = Object.keys(byDifficulty).map(Number).sort();
 
-    if (difficulties.length > 0) {
+    if (difficulties.length > 0 && difficulty_bias) {
+      // Difficulty weights: harder modules lean 4-5, easier lean 1-2.
+      const weightFor = (d: number) =>
+        difficulty_bias === 'harder'
+          ? [0.05, 0.1, 0.2, 0.35, 0.3][d - 1] ?? 0.2
+          : [0.3, 0.35, 0.2, 0.1, 0.05][d - 1] ?? 0.2;
+      const targets = difficulties.map((d) => ({
+        d,
+        want: Math.round(effectiveCount * weightFor(d)),
+      }));
+      for (const t of targets) {
+        selected.push(...byDifficulty[t.d].slice(0, t.want));
+      }
+      // Fill any shortfall from whatever remains, biased order
+      if (selected.length < effectiveCount) {
+        const chosen = new Set(selected.map((q) => q.question_id));
+        const rest = typedQuestions
+          .filter((q) => !chosen.has(q.question_id))
+          .sort((a, b) =>
+            difficulty_bias === 'harder'
+              ? b.difficulty - a.difficulty
+              : a.difficulty - b.difficulty
+          );
+        selected.push(...rest.slice(0, effectiveCount - selected.length));
+      }
+      selected.splice(effectiveCount);
+    } else if (difficulties.length > 0) {
       const perDifficulty = Math.floor(effectiveCount / difficulties.length);
       const remainder = effectiveCount % difficulties.length;
 

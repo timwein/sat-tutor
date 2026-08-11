@@ -7,6 +7,7 @@ import { getMasteryLevel } from '@/lib/elo';
 import { computeCurrentStreak, getActivityDays } from '@/lib/streak-calculator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ProgressTabs } from '@/components/progress-tabs';
+import { ProgressChart } from '@/components/progress-chart';
 
 export default async function ProgressPage() {
   const supabase = createServerClient();
@@ -22,12 +23,13 @@ export default async function ProgressPage() {
   const ratings = (skillRatings ?? []) as SkillRating[];
 
   // Load latest score prediction
-  const { data: scorePrediction } = await supabase
+  const { data: predictionHistory } = await supabase
     .from('score_predictions').select('*')
     .eq('student_id', studentId)
-    .order('predicted_at', { ascending: false })
-    .limit(1).maybeSingle();
-  const prediction = scorePrediction as ScorePrediction | null;
+    .order('predicted_at', { ascending: true })
+    .limit(60);
+  const predictions = (predictionHistory ?? []) as ScorePrediction[];
+  const prediction = predictions.length > 0 ? predictions[predictions.length - 1] : null;
 
   // Load recent completed sessions
   const { data: sessionsData } = await supabase
@@ -52,7 +54,7 @@ export default async function ProgressPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4 md:space-y-6">
       <h1 className="text-2xl font-bold md:text-3xl">My Progress</h1>
-      <p className="text-gray-500">Track your skill development across all SAT sub-skills.</p>
+      <p className="text-gray-500 dark:text-gray-400">Track your skill development across all SAT sub-skills.</p>
 
       {/* Stats cards row */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -62,14 +64,14 @@ export default async function ProgressPage() {
             {prediction ? (
               <>
                 <span className="text-3xl font-bold">{prediction.total_score_mid}</span>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   {prediction.total_score_low} - {prediction.total_score_high}
                 </p>
               </>
             ) : (
               <>
-                <span className="text-3xl font-bold text-gray-400">--</span>
-                <p className="mt-1 text-xs text-gray-500">Not enough data yet</p>
+                <span className="text-3xl font-bold text-gray-400 dark:text-gray-500">--</span>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Not enough data yet</p>
               </>
             )}
           </CardContent>
@@ -84,11 +86,14 @@ export default async function ProgressPage() {
             {overallAccuracy !== null ? (
               <span className="text-3xl font-bold">{overallAccuracy}%</span>
             ) : (
-              <span className="text-3xl font-bold text-gray-400">--</span>
+              <span className="text-3xl font-bold text-gray-400 dark:text-gray-500">--</span>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Score trend over time */}
+      <ProgressChart predictions={predictions} />
 
       {/* Tabbed content */}
       <ProgressTabs

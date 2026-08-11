@@ -82,6 +82,7 @@ export function ActiveSession({
   const [confidence, setConfidence] = useState<'guessing' | 'okay' | 'confident' | null>(null);
   const [crossedOut, setCrossedOut] = useState<Set<string>>(new Set());
   const questionStartTimeRef = useRef<number>(Date.now());
+  const strengthBoostRef = useRef<number>(0);
 
   // Attempt result state
   const [attemptResult, setAttemptResult] = useState<AttemptResponse | null>(null);
@@ -121,10 +122,21 @@ export function ActiveSession({
         throw new Error(data.error || 'Failed to end session');
       }
 
-      const session: Session = await res.json();
+      const session: Session & { insights_refresh_recommended?: boolean } =
+        await res.json();
       setEndedSession(session);
       setSummary(session.summary || 'Great effort! Keep practicing to improve your skills.');
       setState('ended');
+
+      // Enough new wrong answers accumulated - refresh the insight analysis
+      // in the background so it's ready next time the Insights page opens.
+      if (session.insights_refresh_recommended) {
+        fetch('/api/insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ student_id: studentId }),
+        }).catch(() => {});
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to end session');
       setState('answering');
@@ -137,11 +149,20 @@ export function ActiveSession({
     setError(null);
     setShowExplanationSheet(false);
 
+    // After choosing "switch to easier questions", the next few picks come
+    // from the student's strongest skill to rebuild confidence.
+    const preferStrength = strengthBoostRef.current > 0;
+    if (preferStrength) strengthBoostRef.current -= 1;
+
     try {
       const res = await fetch('/api/questions/next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ session_id: sessionId, student_id: studentId }),
+        body: JSON.stringify({
+          session_id: sessionId,
+          student_id: studentId,
+          prefer_strength: preferStrength,
+        }),
       });
 
       if (!res.ok) {
@@ -298,7 +319,7 @@ export function ActiveSession({
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-          <p className="text-gray-500">Loading your next question...</p>
+          <p className="text-gray-500 dark:text-gray-400">Loading your next question...</p>
         </div>
       </div>
     );
@@ -310,7 +331,7 @@ export function ActiveSession({
       <div className="flex h-full items-center justify-center">
         <div className="text-center">
           <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
-          <p className="text-gray-500">Generating your session summary...</p>
+          <p className="text-gray-500 dark:text-gray-400">Generating your session summary...</p>
         </div>
       </div>
     );
@@ -336,6 +357,14 @@ export function ActiveSession({
         question={attemptResult.question}
         studentAnswer={selectedAnswer ?? ''}
         isCorrect={attemptResult.is_correct}
+        studentId={studentId}
+        frustrationLevel={
+          frustrationState?.isFrustrated
+            ? frustrationState.consecutiveWrong >= 5
+              ? 'high'
+              : 'medium'
+            : 'none'
+        }
       />
       <Button onClick={fetchNextQuestion} className="w-full">
         Next Question
@@ -359,13 +388,13 @@ export function ActiveSession({
       <div className="flex-1 overflow-y-auto p-3 md:p-6">
         <div className="mx-auto max-w-3xl space-y-4 md:space-y-6">
           {error && (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-400">
               {error}
             </div>
           )}
 
           {frustrationState?.recommendation === 'normalize' && state === 'answering' && (
-            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/40 p-4 text-sm text-amber-700 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>
                 Tricky questions! That&apos;s totally normal — these are meant to challenge you.
@@ -383,6 +412,7 @@ export function ActiveSession({
                 difficulty={currentQuestion.difficulty}
                 questionNumber={questionNumber}
                 totalQuestions={maxQuestions}
+                isAiGenerated={currentQuestion.is_ai_generated}
               />
 
               <AnswerChoices
@@ -422,7 +452,7 @@ export function ActiveSession({
                     <Button
                       variant="ghost"
                       onClick={skipQuestion}
-                      className="text-gray-500"
+                      className="text-gray-500 dark:text-gray-400"
                     >
                       Skip
                     </Button>
@@ -433,7 +463,7 @@ export function ActiveSession({
               {state === 'submitting' && (
                 <div className="flex items-center justify-center py-4">
                   <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
-                  <span className="ml-2 text-sm text-gray-500">Checking your answer...</span>
+                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Checking your answer...</span>
                 </div>
               )}
 
@@ -508,6 +538,7 @@ export function ActiveSession({
             <Button
               onClick={() => {
                 setShowFrustrationDialog(false);
+                strengthBoostRef.current = 3;
                 fetchNextQuestion();
               }}
             >

@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GraduationCap } from 'lucide-react';
+import { GraduationCap, Settings as SettingsIcon, Users } from 'lucide-react';
 import { Sidebar } from '@/components/sidebar';
 import { BottomNav } from '@/components/bottom-nav';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,11 +20,28 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-screen flex-col md:flex-row">
       {/* Mobile header */}
-      <header className="flex items-center gap-2 border-b bg-white px-4 py-3 md:hidden">
+      <header className="flex items-center justify-between border-b dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3 md:hidden">
         <Link href="/" className="flex items-center gap-2">
           <GraduationCap className="h-7 w-7 text-blue-600" />
-          <span className="text-lg font-bold text-gray-900">SAT Tutor Pro</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-gray-100">SAT Tutor Pro</span>
         </Link>
+        <div className="flex items-center gap-3">
+          <ThemeToggle className="text-gray-500 dark:text-gray-400 active:text-gray-700 dark:active:text-gray-300" />
+          <Link
+            href="/settings"
+            aria-label="Settings"
+            className="text-gray-500 dark:text-gray-400 active:text-gray-700 dark:active:text-gray-300"
+          >
+            <SettingsIcon className="h-5 w-5" />
+          </Link>
+          <Link
+            href="/parent"
+            aria-label="Parent dashboard"
+            className="text-gray-500 dark:text-gray-400 active:text-gray-700 dark:active:text-gray-300"
+          >
+            <Users className="h-5 w-5" />
+          </Link>
+        </div>
       </header>
 
       {/* Desktop sidebar */}
@@ -32,7 +50,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto bg-gray-50 p-4 pb-20 md:p-8 md:pb-8">
+      <main className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-800/60 p-4 pb-20 md:p-8 md:pb-8">
         {children}
       </main>
 

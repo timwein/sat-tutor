@@ -151,7 +151,7 @@ export function QuestionBankOverview() {
       <Card>
         <CardContent className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-          <span className="ml-2 text-sm text-gray-500">Loading questions...</span>
+          <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading questions...</span>
         </CardContent>
       </Card>
     );
@@ -161,7 +161,7 @@ export function QuestionBankOverview() {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <p className="text-sm text-gray-500">No questions in the bank yet. Upload a practice test to get started.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">No questions in the bank yet. Upload a practice test to get started.</p>
         </CardContent>
       </Card>
     );
@@ -176,7 +176,7 @@ export function QuestionBankOverview() {
       </CardHeader>
       <CardContent className="space-y-3">
         {error && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-2 text-sm text-red-700 dark:text-red-400">
             {error}
           </div>
         )}
@@ -186,7 +186,7 @@ export function QuestionBankOverview() {
           <select
             value={filterTest}
             onChange={(e) => setFilterTest(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-sm"
           >
             <option value="all">All Tests</option>
             {testLabels.map((t) => (
@@ -198,20 +198,20 @@ export function QuestionBankOverview() {
           <select
             value={filterSection}
             onChange={(e) => setFilterSection(e.target.value)}
-            className="rounded-md border border-gray-300 px-2 py-1.5 text-sm"
+            className="rounded-md border border-gray-300 dark:border-gray-700 px-2 py-1.5 text-sm"
           >
             <option value="all">All Sections</option>
             <option value="rw">Reading & Writing</option>
             <option value="math">Math</option>
           </select>
           <div className="relative flex-1 min-w-[140px]">
-            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+            <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search..."
-              className="w-full rounded-md border border-gray-300 py-1.5 pl-7 pr-2 text-sm"
+              className="w-full rounded-md border border-gray-300 dark:border-gray-700 py-1.5 pl-7 pr-2 text-sm"
             />
           </div>
           <Badge variant="outline" className="text-xs">
@@ -222,8 +222,8 @@ export function QuestionBankOverview() {
         {/* Table */}
         <div className="max-h-[500px] overflow-y-auto rounded-md border">
           <table className="w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-gray-50">
-              <tr className="border-b text-left text-xs font-medium text-gray-500">
+            <thead className="sticky top-0 z-10 bg-gray-50 dark:bg-gray-800/60">
+              <tr className="border-b text-left text-xs font-medium text-gray-500 dark:text-gray-400">
                 <th className="px-3 py-2">Test</th>
                 <th className="px-3 py-2">Question</th>
                 <th className="px-3 py-2 w-24">Answer</th>
@@ -238,15 +238,15 @@ export function QuestionBankOverview() {
                 return (
                   <tr
                     key={q.question_id}
-                    className="border-b last:border-0 hover:bg-gray-50"
+                    className="border-b last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/60"
                   >
-                    <td className="px-3 py-1.5 whitespace-nowrap text-gray-600">
+                    <td className="px-3 py-1.5 whitespace-nowrap text-gray-600 dark:text-gray-300">
                       {formatTestLabel(parsed.testLabel)}
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap">
-                      <span className="text-gray-500">{formatSection(parsed.section)}</span>
+                      <span className="text-gray-500 dark:text-gray-400">{formatSection(parsed.section)}</span>
                       {' '}
-                      <span className="text-gray-400">{formatModule(parsed.module)}</span>
+                      <span className="text-gray-400 dark:text-gray-500">{formatModule(parsed.module)}</span>
                       {' '}
                       <span className="font-medium">Q{parsed.questionNum}</span>
                     </td>
@@ -268,7 +268,7 @@ export function QuestionBankOverview() {
                           <button
                             onClick={() => saveEdit(q.question_id)}
                             disabled={saving}
-                            className="rounded p-0.5 text-green-600 hover:bg-green-50"
+                            className="rounded p-0.5 text-green-600 hover:bg-green-50 dark:hover:bg-green-950/40"
                           >
                             {saving ? (
                               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -280,7 +280,7 @@ export function QuestionBankOverview() {
                       ) : (
                         <button
                           onClick={() => startEdit(q.question_id, q.correct_answer)}
-                          className="group flex items-center gap-1 rounded px-1 py-0.5 hover:bg-blue-50"
+                          className="group flex items-center gap-1 rounded px-1 py-0.5 hover:bg-blue-50 dark:hover:bg-blue-950/40"
                         >
                           <span className="font-medium">{q.correct_answer}</span>
                           <Pencil className="h-3 w-3 text-gray-300 group-hover:text-blue-500" />

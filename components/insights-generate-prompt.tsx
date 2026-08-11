@@ -58,32 +58,32 @@ export function InsightsGeneratePrompt({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-gray-700">
+        <p className="text-gray-700 dark:text-gray-300">
           You have{' '}
           <span className="font-semibold text-blue-600">
             {wrongAnswerCount}
           </span>{' '}
           wrong answers ready to analyze!
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           The AI will examine your wrong answers across 8 dimensions to uncover
           hidden patterns and provide personalized recommendations.
         </p>
 
         {isLoading && (
-          <div className="flex items-center gap-3 rounded-lg bg-blue-50 p-4">
+          <div className="flex items-center gap-3 rounded-lg bg-blue-50 dark:bg-blue-950/40 p-4">
             <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
-            <p className="text-sm text-blue-700">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
               Analyzing your patterns... This may take 15-30 seconds
             </p>
           </div>
         )}
 
         {error && (
-          <div className="flex items-center gap-3 rounded-lg bg-red-50 p-4">
-            <AlertCircle className="h-5 w-5 text-red-600" />
+          <div className="flex items-center gap-3 rounded-lg bg-red-50 dark:bg-red-950/40 p-4">
+            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
             <div className="flex-1">
-              <p className="text-sm text-red-700">{error}</p>
+              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
             </div>
           </div>
         )}

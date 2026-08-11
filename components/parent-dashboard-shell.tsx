@@ -16,6 +16,7 @@ import { ParentOverview } from './parent-overview';
 import { ParentDetailedView } from './parent-detailed-view';
 import { ParentAlerts } from './parent-alerts';
 import { QuestionUploader } from './question-uploader';
+import { QuestionGenerator } from './question-generator';
 import { QuestionBankOverview } from './question-bank-overview';
 import type { ParentDashboardData } from '@/lib/parent-dashboard';
 
@@ -89,14 +90,8 @@ export function ParentDashboardShell({
 
   function handlePinSuccess() {
     setPinDialogOpen(false);
-    if (pinMode === 'setup') {
-      // After setup, user needs to verify
-      setAuthState('needs-auth');
-      setPinDialogOpen(true);
-      setPinMode('verify');
-    } else {
-      setAuthState('authenticated');
-    }
+    // set-pin issues the auth cookie too, so setup goes straight in.
+    setAuthState('authenticated');
   }
 
   function handleAlertDismissed(alertId: string) {
@@ -111,7 +106,7 @@ export function ParentDashboardShell({
   if (authState === 'loading') {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500 dark:text-gray-400">Loading...</div>
       </div>
     );
   }
@@ -129,11 +124,11 @@ export function ParentDashboardShell({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
               The parent dashboard provides a comprehensive view of your
               student&apos;s SAT prep journey, including:
             </p>
-            <ul className="ml-4 list-disc space-y-1 text-sm text-gray-600">
+            <ul className="ml-4 list-disc space-y-1 text-sm text-gray-600 dark:text-gray-300">
               <li>Predicted score and trend</li>
               <li>Total study time this week/month</li>
               <li>Session frequency and consistency</li>
@@ -196,7 +191,7 @@ export function ParentDashboardShell({
   if (loadingData || !dashboardData) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gray-500">Loading dashboard data...</div>
+        <div className="text-gray-500 dark:text-gray-400">Loading dashboard data...</div>
       </div>
     );
   }
@@ -242,6 +237,7 @@ export function ParentDashboardShell({
 
       <TabsContent value="questions" className="space-y-6">
         <QuestionBankOverview />
+        <QuestionGenerator />
         <QuestionUploader studentId={studentId} />
       </TabsContent>
     </Tabs>

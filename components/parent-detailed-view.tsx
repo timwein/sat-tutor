@@ -38,10 +38,10 @@ const LINE_COLORS = [
 ];
 
 const MASTERY_BADGE_STYLES: Record<string, string> = {
-  Developing: 'bg-red-100 text-red-800 border-red-200',
+  Developing: 'bg-red-100 dark:bg-red-950/60 text-red-800 dark:text-red-300 border-red-200',
   Progressing: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-  Proficient: 'bg-blue-100 text-blue-800 border-blue-200',
-  Mastered: 'bg-green-100 text-green-800 border-green-200',
+  Proficient: 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200',
+  Mastered: 'bg-green-100 dark:bg-green-950/60 text-green-800 dark:text-green-300 border-green-200',
 };
 
 const allSkills = [...SKILL_TAXONOMY.reading_writing, ...SKILL_TAXONOMY.math];
@@ -93,7 +93,7 @@ export function ParentDetailedView({
         </CardHeader>
         <CardContent>
           {errorRateByTopic.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-500">
+            <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
               Not enough data to display error rate trends yet.
             </p>
           ) : (
@@ -139,7 +139,7 @@ export function ParentDetailedView({
         </CardHeader>
         <CardContent>
           {sortedRatings.length === 0 ? (
-            <p className="py-8 text-center text-sm text-gray-500">
+            <p className="py-8 text-center text-sm text-gray-500 dark:text-gray-400">
               No skill ratings available yet.
             </p>
           ) : (
@@ -147,22 +147,22 @@ export function ParentDetailedView({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-2 pr-4 font-medium text-gray-700">
+                    <th className="pb-2 pr-4 font-medium text-gray-700 dark:text-gray-300">
                       Skill
                     </th>
-                    <th className="pb-2 pr-4 font-medium text-gray-700">
+                    <th className="pb-2 pr-4 font-medium text-gray-700 dark:text-gray-300">
                       Domain
                     </th>
-                    <th className="pb-2 pr-4 font-medium text-gray-700">
+                    <th className="pb-2 pr-4 font-medium text-gray-700 dark:text-gray-300">
                       Elo
                     </th>
-                    <th className="pb-2 pr-4 font-medium text-gray-700">
+                    <th className="pb-2 pr-4 font-medium text-gray-700 dark:text-gray-300">
                       Accuracy
                     </th>
-                    <th className="pb-2 pr-4 font-medium text-gray-700">
+                    <th className="pb-2 pr-4 font-medium text-gray-700 dark:text-gray-300">
                       Mastery
                     </th>
-                    <th className="pb-2 font-medium text-gray-700">
+                    <th className="pb-2 font-medium text-gray-700 dark:text-gray-300">
                       Questions
                     </th>
                   </tr>
@@ -188,7 +188,7 @@ export function ParentDetailedView({
                         <td className="py-2 pr-4 font-medium">
                           {skill?.name ?? rating.sub_skill_id}
                         </td>
-                        <td className="py-2 pr-4 text-gray-600">
+                        <td className="py-2 pr-4 text-gray-600 dark:text-gray-300">
                           {skill?.domain ?? 'Unknown'}
                         </td>
                         <td className="py-2 pr-4 font-mono">

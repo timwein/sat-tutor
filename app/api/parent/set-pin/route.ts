@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase';
-import { hashPin } from '@/lib/parent-auth';
+import { hashPin, generateAccessToken } from '@/lib/parent-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,6 +62,17 @@ export async function POST(request: NextRequest) {
         );
       }
     }
+
+    // Setting the PIN proves you know it - sign the parent in immediately
+    // instead of asking them to re-enter it.
+    const token = generateAccessToken(student_id);
+    (await cookies()).set('parent_access_token', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: 1800,
+      path: '/',
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

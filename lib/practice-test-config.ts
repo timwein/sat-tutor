@@ -48,6 +48,36 @@ export const SAT_MODULES: ModuleDefinition[] = [
 export const TIMED_SECTION_OPTIONS = SAT_MODULES.filter((m) => !m.adaptive);
 
 // ============================================
+// Full practice test sequence
+// ============================================
+
+export type FullTestStage =
+  | { kind: 'module'; moduleId: string }
+  | { kind: 'break'; seconds: number };
+
+/** Official digital SAT order: RW 1, RW 2, 10-minute break, Math 1, Math 2 */
+export const FULL_TEST_SEQUENCE: FullTestStage[] = [
+  { kind: 'module', moduleId: 'rw-module-1' },
+  { kind: 'module', moduleId: 'rw-module-2' },
+  { kind: 'break', seconds: 10 * 60 },
+  { kind: 'module', moduleId: 'math-module-1' },
+  { kind: 'module', moduleId: 'math-module-2' },
+];
+
+export interface FullTestStageResult {
+  module_id: string;
+  correct: number;
+  total: number;
+  accuracy: number;
+  time_used_seconds: number;
+}
+
+/** Accuracy on a section's module 1 decides module 2's difficulty mix. */
+export function biasFromModule1Accuracy(accuracy: number): 'harder' | 'easier' {
+  return accuracy >= 0.6 ? 'harder' : 'easier';
+}
+
+// ============================================
 // Pacing thresholds
 // ============================================
 

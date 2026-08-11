@@ -11,7 +11,7 @@ interface StreakDisplayProps {
 
 const MILESTONES = [
   { days: 7, label: '7 days', style: 'bg-orange-100 text-orange-700 border-orange-300' },
-  { days: 14, label: '14 days', style: 'bg-gray-200 text-gray-700 border-gray-400' },
+  { days: 14, label: '14 days', style: 'bg-gray-200 text-gray-700 dark:text-gray-300 border-gray-400' },
   { days: 30, label: '30 days', style: 'bg-yellow-100 text-yellow-700 border-yellow-400' },
   { days: 60, label: '60 days', style: 'bg-emerald-100 text-emerald-700 border-emerald-400' },
   { days: 90, label: '90 days', style: 'bg-purple-100 text-purple-700 border-purple-400' },

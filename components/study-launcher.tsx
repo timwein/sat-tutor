@@ -19,6 +19,8 @@ import type { Session } from '@/lib/types';
 interface StudyLauncherProps {
   studentId: string;
   lowestRatedSkill: string;
+  /** True when the preselected skill came from an insight's targeted-drill link */
+  highlightFocus?: boolean;
   recentSessions: Session[];
 }
 
@@ -27,7 +29,7 @@ const allSkills = [
   ...SKILL_TAXONOMY.reading_writing.map((s) => ({ ...s, section: 'reading_writing' as const })),
 ];
 
-export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: StudyLauncherProps) {
+export function StudyLauncher({ studentId, lowestRatedSkill, highlightFocus, recentSessions }: StudyLauncherProps) {
   const router = useRouter();
   const [selectedSkill, setSelectedSkill] = useState(lowestRatedSkill);
   const [isStarting, setIsStarting] = useState(false);
@@ -65,7 +67,7 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
           {error}
         </div>
       )}
@@ -78,23 +80,29 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               10 questions, ~10 minutes. Focus on one sub-skill.
             </p>
+            {highlightFocus && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/40 p-2 text-xs text-amber-800 dark:text-amber-300">
+                <Target className="mr-1 inline h-3.5 w-3.5" />
+                Targeted drill: preselected from your insights
+              </div>
+            )}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Sub-skill focus</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Sub-skill focus</label>
               <Select value={selectedSkill} onValueChange={setSelectedSkill}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <div className="px-2 py-1 text-xs font-semibold text-gray-500">Math</div>
+                  <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Math</div>
                   {SKILL_TAXONOMY.math.map((skill) => (
                     <SelectItem key={skill.id} value={skill.id}>
                       {skill.id}: {skill.name}
                     </SelectItem>
                   ))}
-                  <div className="px-2 py-1 text-xs font-semibold text-gray-500">Reading & Writing</div>
+                  <div className="px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400">Reading & Writing</div>
                   {SKILL_TAXONOMY.reading_writing.map((skill) => (
                     <SelectItem key={skill.id} value={skill.id}>
                       {skill.id}: {skill.name}
@@ -121,11 +129,11 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               25-45 minutes. Mixed sub-skills with adaptive difficulty and
               AI-powered explanations.
             </p>
-            <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+            <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3 text-sm text-blue-700 dark:text-blue-300">
               The AI will automatically select questions based on your weakest
               skills and adjust difficulty as you go.
             </div>
@@ -156,7 +164,7 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
                     <Badge variant="secondary">
                       {session.session_type === 'quick_drill' ? 'Quick Drill' : 'Study Session'}
                     </Badge>
-                    <span className="text-sm text-gray-600">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">
                       {new Date(session.started_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -166,11 +174,11 @@ export function StudyLauncher({ studentId, lowestRatedSkill, recentSessions }: S
                     </span>
                   </div>
                   <div className="flex items-center gap-4 text-sm">
-                    <span className="flex items-center gap-1 text-gray-500">
+                    <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                       <Target className="h-4 w-4" />
                       {session.questions_answered} questions
                     </span>
-                    <span className="flex items-center gap-1 text-gray-500">
+                    <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                       <Clock className="h-4 w-4" />
                       {session.accuracy != null ? `${Math.round(session.accuracy * 100)}%` : '--'}
                     </span>

@@ -13,16 +13,41 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { InsightItem } from '@/lib/types';
+import { EvidenceList, type EvidenceMap } from '@/components/evidence-list';
 
 interface InsightCardProps {
   insight: InsightItem;
   index: number;
+  evidenceMap?: EvidenceMap;
+}
+
+/**
+ * Resolve the sub-skill a targeted drill should focus on: prefer a skill id
+ * mentioned in the finding/recommendation text, else the dominant skill among
+ * the evidence questions.
+ */
+function resolveFocusSkill(insight: InsightItem, evidenceMap: EvidenceMap): string | null {
+  const text = `${insight.finding} ${insight.recommendation}`;
+  const mentioned = text.match(/\b(M|RW)-\d{2}\b/);
+  if (mentioned) return mentioned[0];
+
+  const counts = new Map<string, number>();
+  for (const id of insight.evidence_question_ids ?? []) {
+    const q = evidenceMap[id];
+    if (q) counts.set(q.sub_skill_id, (counts.get(q.sub_skill_id) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  let bestCount = 0;
+  for (const [skill, count] of counts) {
+    if (count > bestCount) { best = skill; bestCount = count; }
+  }
+  return best;
 }
 
 const SEVERITY_STYLES: Record<string, string> = {
-  high: 'bg-red-100 text-red-700',
-  medium: 'bg-amber-100 text-amber-700',
-  low: 'bg-blue-100 text-blue-700',
+  high: 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300',
+  medium: 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300',
+  low: 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300',
 };
 
 function TrendIndicator({ trend }: { trend: InsightItem['trend'] }) {
@@ -36,7 +61,7 @@ function TrendIndicator({ trend }: { trend: InsightItem['trend'] }) {
       );
     case 'worsening':
       return (
-        <span className="flex items-center gap-1 text-sm text-red-600">
+        <span className="flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
           <ArrowDown className="h-4 w-4" />
           Worsening
         </span>
@@ -44,7 +69,7 @@ function TrendIndicator({ trend }: { trend: InsightItem['trend'] }) {
     case 'stagnant':
     default:
       return (
-        <span className="flex items-center gap-1 text-sm text-gray-500">
+        <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
           <ArrowRight className="h-4 w-4" />
           Stagnant
         </span>
@@ -52,7 +77,8 @@ function TrendIndicator({ trend }: { trend: InsightItem['trend'] }) {
   }
 }
 
-export function InsightCard({ insight, index }: InsightCardProps) {
+export function InsightCard({ insight, index, evidenceMap }: InsightCardProps) {
+  const focusSkill = resolveFocusSkill(insight, evidenceMap ?? {});
   return (
     <Card>
       <CardHeader>
@@ -71,28 +97,33 @@ export function InsightCard({ insight, index }: InsightCardProps) {
             <TrendIndicator trend={insight.trend} />
           </div>
         </div>
-        <p className="text-sm text-gray-500">{insight.dimension}</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{insight.dimension}</p>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-gray-700">{insight.finding}</p>
+        <p className="text-gray-700 dark:text-gray-300">{insight.finding}</p>
 
-        <div className="rounded-lg bg-blue-50 p-3">
-          <p className="text-sm text-blue-800">
+        <div className="rounded-lg bg-blue-50 dark:bg-blue-950/40 p-3">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
             <span className="font-semibold">Recommendation: </span>
             {insight.recommendation}
           </p>
         </div>
 
-        <p className="flex items-center gap-1 text-xs text-gray-500">
-          <Target className="h-3.5 w-3.5" />
-          Based on {insight.evidence_question_ids.length} questions
-        </p>
+        <div className="flex items-start gap-1">
+          <Target className="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-400" />
+          <EvidenceList
+            questionIds={insight.evidence_question_ids}
+            evidenceMap={evidenceMap ?? {}}
+          />
+        </div>
       </CardContent>
 
       <CardFooter>
         <Button asChild variant="outline" className="w-full">
-          <Link href="/study">Start Targeted Drill</Link>
+          <Link href={focusSkill ? `/study?focus=${focusSkill}` : '/study'}>
+            {focusSkill ? `Start Targeted Drill (${focusSkill})` : 'Start Targeted Drill'}
+          </Link>
         </Button>
       </CardFooter>
     </Card>

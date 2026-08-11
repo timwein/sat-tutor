@@ -29,10 +29,10 @@ interface SessionSummaryCardProps {
 }
 
 const MASTERY_COLORS: Record<MasteryLevel, string> = {
-  Developing: 'bg-red-100 text-red-700',
-  Progressing: 'bg-amber-100 text-amber-700',
-  Proficient: 'bg-blue-100 text-blue-700',
-  Mastered: 'bg-green-100 text-green-700',
+  Developing: 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300',
+  Progressing: 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300',
+  Proficient: 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300',
+  Mastered: 'bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300',
 };
 
 function formatDuration(startedAt: string, endedAt: string | null): string {
@@ -69,38 +69,38 @@ export function SessionSummaryCard({
       <CardContent className="space-y-6">
         {/* Stats row */}
         <div className="grid grid-cols-3 gap-2 md:gap-4">
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-3 md:p-4">
-            <Clock className="mb-1 h-4 w-4 text-gray-500 md:h-5 md:w-5" />
+          <div className="flex flex-col items-center rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 md:p-4">
+            <Clock className="mb-1 h-4 w-4 text-gray-500 dark:text-gray-400 md:h-5 md:w-5" />
             <span className="text-sm font-semibold md:text-lg">
               {formatDuration(session.started_at, session.ended_at)}
             </span>
-            <span className="text-xs text-gray-500">Duration</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Duration</span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-3 md:p-4">
-            <Target className="mb-1 h-4 w-4 text-gray-500 md:h-5 md:w-5" />
+          <div className="flex flex-col items-center rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 md:p-4">
+            <Target className="mb-1 h-4 w-4 text-gray-500 dark:text-gray-400 md:h-5 md:w-5" />
             <span className="text-sm font-semibold md:text-lg">
               {session.questions_correct} / {session.questions_answered}
             </span>
-            <span className="text-xs text-gray-500">Questions</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Questions</span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-gray-50 p-3 md:p-4">
-            <CheckCircle className="mb-1 h-4 w-4 text-gray-500 md:h-5 md:w-5" />
+          <div className="flex flex-col items-center rounded-lg bg-gray-50 dark:bg-gray-800/60 p-3 md:p-4">
+            <CheckCircle className="mb-1 h-4 w-4 text-gray-500 dark:text-gray-400 md:h-5 md:w-5" />
             <span className="text-sm font-semibold md:text-lg">{accuracy}%</span>
-            <span className="text-xs text-gray-500">Accuracy</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Accuracy</span>
           </div>
         </div>
 
         <Separator />
 
         {/* Claude's summary */}
-        <p className="leading-relaxed text-gray-700">{summary}</p>
+        <p className="leading-relaxed text-gray-700 dark:text-gray-300">{summary}</p>
 
         <Separator />
 
         {/* Elo changes list */}
         {eloChanges.length > 0 && (
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-900">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">
               Skill Rating Changes
             </h3>
             <div className="space-y-2">
@@ -109,7 +109,7 @@ export function SessionSummaryCard({
                   key={change.sub_skill_id}
                   className="flex items-center justify-between rounded-lg border px-4 py-2"
                 >
-                  <span className="text-sm font-medium text-gray-700">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {change.sub_skill_name}
                   </span>
                   <div className="flex items-center gap-3">
@@ -117,8 +117,8 @@ export function SessionSummaryCard({
                       className={cn(
                         'flex items-center gap-1 text-sm font-semibold',
                         change.delta > 0 && 'text-green-600',
-                        change.delta < 0 && 'text-red-600',
-                        change.delta === 0 && 'text-gray-500'
+                        change.delta < 0 && 'text-red-600 dark:text-red-400',
+                        change.delta === 0 && 'text-gray-500 dark:text-gray-400'
                       )}
                     >
                       {change.delta > 0 && (

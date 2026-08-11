@@ -72,18 +72,51 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
     }
   }
 
+  async function startFullTest() {
+    setStartingModule('full-test');
+    setStartError(null);
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: studentId,
+          session_type: 'full_practice_test',
+          metadata: {
+            full_test: true,
+            stage_index: 0,
+            stage_results: [],
+            stage_started_at: new Date().toISOString(),
+            module_id: 'rw-module-1',
+            section: 'reading_writing',
+            time_limit_seconds: 32 * 60,
+          },
+        }),
+      });
+
+      if (!res.ok) throw new Error('Failed to create session');
+
+      const { session } = await res.json();
+      router.push(`/practice-test/${session.id}`);
+    } catch (error) {
+      console.error('Failed to start full practice test:', error);
+      setStartError("Couldn't start the test. Please try again.");
+      setStartingModule(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-8">
       <div>
         <h1 className="text-3xl font-bold">Practice Test</h1>
-        <p className="mt-1 text-gray-500">
+        <p className="mt-1 text-gray-500 dark:text-gray-400">
           Simulate real SAT conditions with timed sections. No hints available — just like test day.
         </p>
       </div>
 
       {/* Timed Section Cards */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-800">Timed Sections</h2>
+        <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Timed Sections</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {SECTION_OPTIONS.map((option) => {
             const Icon = option.icon;
@@ -98,14 +131,14 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-sm text-gray-500">{option.description}</p>
-                  <div className="space-y-1 text-sm text-gray-600">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{option.description}</p>
+                  <div className="space-y-1 text-sm text-gray-600 dark:text-gray-300">
                     <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-gray-400" />
+                      <BookOpen className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       <span>Up to {option.questionCount} questions</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-gray-400" />
+                      <Clock className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       <span>{option.timeLimitMinutes} minutes</span>
                     </div>
                   </div>
@@ -120,7 +153,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                     {!isStarting && <ArrowRight className="ml-1 h-4 w-4" />}
                   </Button>
                   {startError && startingModule === null && (
-                    <p className="text-sm text-red-600" role="alert">
+                    <p className="text-sm text-red-600 dark:text-red-400" role="alert">
                       {startError}
                     </p>
                   )}
@@ -131,38 +164,49 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
         </div>
       </div>
 
-      {/* Full Practice Test — Coming Soon */}
+      {/* Full Practice Test */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-gray-800">Full Practice Test</h2>
-        <Card className="opacity-75">
+        <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Full Practice Test</h2>
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-gray-500">
+            <CardTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5" />
               Full-Length Practice Test
-              <Badge variant="secondary" className="ml-2">Coming Soon</Badge>
+              <Badge variant="secondary" className="ml-2">All 4 modules</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 text-sm text-gray-500">
+            <div className="space-y-3 text-sm text-gray-500 dark:text-gray-400">
               <p>
-                A complete SAT practice test with all 4 modules (2 Reading & Writing + 2 Math),
-                adaptive difficulty, and a full score report.
+                The complete digital SAT experience: Reading &amp; Writing modules 1 and 2,
+                a 10-minute break, then Math modules 1 and 2. Module 2 difficulty adapts
+                to your module 1 performance, and you get an estimated score at the end.
               </p>
               <div className="flex justify-between">
                 <span>Total questions</span>
-                <span>98 questions</span>
+                <span>Up to 98 questions</span>
               </div>
               <div className="flex justify-between">
                 <span>Total time</span>
                 <span>~2 hours 14 minutes</span>
               </div>
-              <p className="text-xs text-gray-400">
-                Requires more questions in the question bank. Check back soon.
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                Set aside an uninterrupted block - the timer keeps running like on test day.
               </p>
             </div>
-            <Button disabled className="mt-4">
-              Coming Soon
+            <Button
+              className="mt-4"
+              onClick={startFullTest}
+              disabled={startingModule !== null}
+            >
+              {startingModule === 'full-test' ? 'Starting...' : 'Start Full Practice Test'}
+              {startingModule !== 'full-test' && <ArrowRight className="ml-1 h-4 w-4" />}
             </Button>
+            {startError && startingModule === null && (
+              <p className="mt-2 text-sm text-red-600 dark:text-red-400" role="alert">
+                {startError}
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -170,7 +214,7 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
       {/* Recent Practice Sessions */}
       {recentSessions.length > 0 && (
         <div>
-          <h2 className="mb-4 text-lg font-semibold text-gray-800">Recent Practice Sessions</h2>
+          <h2 className="mb-4 text-lg font-semibold text-gray-800 dark:text-gray-100">Recent Practice Sessions</h2>
           <Card>
             <CardContent className="pt-6">
               <div className="space-y-2">
@@ -187,11 +231,11 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                     <button
                       key={session.id}
                       onClick={() => router.push(`/practice-test/${session.id}`)}
-                      className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors hover:bg-gray-50"
+                      className="flex w-full items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/60"
                     >
                       <div className="flex items-center gap-3">
                         <Badge variant="secondary">{sectionLabel}</Badge>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">
                           {new Date(session.started_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
@@ -201,15 +245,15 @@ export function PracticeTestLauncher({ studentId, recentSessions }: PracticeTest
                         </span>
                       </div>
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="text-gray-500">
+                        <span className="text-gray-500 dark:text-gray-400">
                           {session.questions_answered} questions
                         </span>
-                        <span className="text-gray-500">
+                        <span className="text-gray-500 dark:text-gray-400">
                           {session.accuracy != null
                             ? `${Math.round(session.accuracy * 100)}%`
                             : '--'}
                         </span>
-                        <ArrowRight className="h-4 w-4 text-gray-400" />
+                        <ArrowRight className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                       </div>
                     </button>
                   );

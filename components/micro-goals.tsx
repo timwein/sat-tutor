@@ -41,11 +41,11 @@ export function MicroGoals({ goals }: MicroGoalsProps) {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-semibold text-gray-900">This Week&apos;s Goals</h2>
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">This Week&apos;s Goals</h2>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {goals.map((goal) => {
           const Icon = GOAL_ICONS[goal.goalType] ?? Target;
-          const color = GOAL_COLORS[goal.goalType] ?? 'text-gray-600';
+          const color = GOAL_COLORS[goal.goalType] ?? 'text-gray-600 dark:text-gray-300';
 
           // For "lower is better" goals, invert the progress
           const isLowerBetter =
@@ -71,7 +71,7 @@ export function MicroGoals({ goals }: MicroGoalsProps) {
           }
 
           return (
-            <Card key={goal.id} className={goal.isCompleted ? 'border-green-200 bg-green-50' : ''}>
+            <Card key={goal.id} className={goal.isCompleted ? 'border-green-200 bg-green-50 dark:bg-green-950/40' : ''}>
               <CardContent className="flex items-start gap-3 pt-4">
                 <div className="mt-0.5">
                   <Icon className={`h-5 w-5 ${goal.isCompleted ? 'text-green-600' : color}`} />
@@ -82,7 +82,7 @@ export function MicroGoals({ goals }: MicroGoalsProps) {
                     {goal.isCompleted && (
                       <Badge
                         variant="outline"
-                        className="border-green-300 bg-green-100 text-green-700"
+                        className="border-green-300 bg-green-100 dark:bg-green-950/60 text-green-700 dark:text-green-300"
                       >
                         <Check className="mr-1 h-3 w-3" />
                         Done
@@ -93,7 +93,7 @@ export function MicroGoals({ goals }: MicroGoalsProps) {
                     value={goal.isCompleted ? 100 : progressPercent}
                     className="h-2"
                   />
-                  <p className="text-xs text-gray-500">{label}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
                 </div>
               </CardContent>
             </Card>

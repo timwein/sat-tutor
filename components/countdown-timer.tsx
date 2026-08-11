@@ -59,22 +59,22 @@ export function CountdownTimer({
         <Clock
           className={cn(
             'h-5 w-5',
-            isCritical ? 'text-red-600' : isWarning ? 'text-orange-500' : 'text-gray-500'
+            isCritical ? 'text-red-600 dark:text-red-400' : isWarning ? 'text-orange-500' : 'text-gray-500 dark:text-gray-400'
           )}
         />
         <span
           className={cn(
             'font-mono text-lg font-semibold tabular-nums',
-            isCritical && 'animate-pulse text-red-600',
+            isCritical && 'animate-pulse text-red-600 dark:text-red-400',
             isWarning && !isCritical && 'text-orange-500',
-            !isWarning && !isCritical && 'text-gray-700'
+            !isWarning && !isCritical && 'text-gray-700 dark:text-gray-300'
           )}
         >
           {formatTime(secondsRemaining)}
         </span>
       </div>
       {currentQuestion != null && totalQuestions != null && (
-        <span className="text-xs text-gray-500">
+        <span className="text-xs text-gray-500 dark:text-gray-400">
           {currentQuestion} / {totalQuestions}
         </span>
       )}

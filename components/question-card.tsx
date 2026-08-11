@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { SelfAnnotatingPassage } from '@/components/self-annotating-passage';
 import { Badge } from '@/components/ui/badge';
 
 interface QuestionCardProps {
@@ -10,6 +11,7 @@ interface QuestionCardProps {
   difficulty: number;
   questionNumber: number;
   totalQuestions?: number;
+  isAiGenerated?: boolean;
 }
 
 export function QuestionCard({
@@ -19,6 +21,7 @@ export function QuestionCard({
   difficulty,
   questionNumber,
   totalQuestions,
+  isAiGenerated,
 }: QuestionCardProps) {
   const maxDifficulty = 5;
   const filledDots = Math.min(Math.max(difficulty, 0), maxDifficulty);
@@ -39,6 +42,11 @@ export function QuestionCard({
           </CardTitle>
           <div className="flex items-center gap-3">
             <Badge variant="secondary">{subSkillId}</Badge>
+            {isAiGenerated && (
+              <Badge variant="outline" className="border-amber-300 text-amber-700 dark:text-amber-300">
+                AI-Generated
+              </Badge>
+            )}
             <div className="flex items-center gap-1" title={`Difficulty: ${difficulty}/${maxDifficulty}`}>
               {Array.from({ length: filledDots }).map((_, i) => (
                 <span
@@ -58,8 +66,8 @@ export function QuestionCard({
       </CardHeader>
       <CardContent>
         {passageText && (
-          <div className="mb-4 max-h-40 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 p-3 text-sm italic text-gray-700 md:max-h-60 md:p-4">
-            {passageText}
+          <div className="mb-4 max-h-40 overflow-y-auto rounded border-l-4 border-blue-200 bg-slate-50 dark:bg-gray-800/60 p-3 text-sm text-gray-700 dark:text-gray-300 md:max-h-60 md:p-4">
+            <SelfAnnotatingPassage text={passageText} />
           </div>
         )}
         <p className="text-base font-medium md:text-lg">{questionText}</p>

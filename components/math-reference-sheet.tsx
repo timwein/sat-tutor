@@ -32,8 +32,8 @@ export function MathReferenceSheet({ isOpen, onToggle }: MathReferenceSheetProps
         <div className="flex flex-col gap-6 text-sm">
           {/* Area */}
           <section>
-            <h3 className="mb-2 font-semibold text-gray-900">Area</h3>
-            <ul className="flex flex-col gap-1 text-gray-700">
+            <h3 className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Area</h3>
+            <ul className="flex flex-col gap-1 text-gray-700 dark:text-gray-300">
               <li>Rectangle: <span className="font-mono">A = lw</span></li>
               <li>Triangle: <span className="font-mono">A = &frac12;bh</span></li>
               <li>Circle: <span className="font-mono">A = &pi;r&sup2;</span></li>
@@ -42,8 +42,8 @@ export function MathReferenceSheet({ isOpen, onToggle }: MathReferenceSheetProps
 
           {/* Volume */}
           <section>
-            <h3 className="mb-2 font-semibold text-gray-900">Volume</h3>
-            <ul className="flex flex-col gap-1 text-gray-700">
+            <h3 className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Volume</h3>
+            <ul className="flex flex-col gap-1 text-gray-700 dark:text-gray-300">
               <li>Rectangular Prism: <span className="font-mono">V = lwh</span></li>
               <li>Cylinder: <span className="font-mono">V = &pi;r&sup2;h</span></li>
               <li>Sphere: <span className="font-mono">V = (4/3)&pi;r&sup3;</span></li>
@@ -54,8 +54,8 @@ export function MathReferenceSheet({ isOpen, onToggle }: MathReferenceSheetProps
 
           {/* Right Triangles */}
           <section>
-            <h3 className="mb-2 font-semibold text-gray-900">Right Triangles</h3>
-            <ul className="flex flex-col gap-1 text-gray-700">
+            <h3 className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Right Triangles</h3>
+            <ul className="flex flex-col gap-1 text-gray-700 dark:text-gray-300">
               <li>Pythagorean Theorem: <span className="font-mono">a&sup2; + b&sup2; = c&sup2;</span></li>
               <li>
                 Special Triangle 30-60-90:{' '}
@@ -70,8 +70,8 @@ export function MathReferenceSheet({ isOpen, onToggle }: MathReferenceSheetProps
 
           {/* Circles */}
           <section>
-            <h3 className="mb-2 font-semibold text-gray-900">Circles</h3>
-            <ul className="flex flex-col gap-1 text-gray-700">
+            <h3 className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Circles</h3>
+            <ul className="flex flex-col gap-1 text-gray-700 dark:text-gray-300">
               <li>Circumference: <span className="font-mono">C = 2&pi;r</span></li>
               <li>
                 Arc Length:{' '}
@@ -86,8 +86,8 @@ export function MathReferenceSheet({ isOpen, onToggle }: MathReferenceSheetProps
 
           {/* Other */}
           <section>
-            <h3 className="mb-2 font-semibold text-gray-900">Other</h3>
-            <ul className="flex flex-col gap-1 text-gray-700">
+            <h3 className="mb-2 font-semibold text-gray-900 dark:text-gray-100">Other</h3>
+            <ul className="flex flex-col gap-1 text-gray-700 dark:text-gray-300">
               <li>The number of degrees of arc in a circle is 360.</li>
               <li>The number of radians in a circle is 2&pi;.</li>
               <li>The sum of the measures of the angles of a triangle is 180 degrees.</li>

@@ -16,6 +16,10 @@ interface ExplanationPanelProps {
   question: Question;
   studentAnswer: string;
   isCorrect: boolean;
+  /** Lets the tutor personalize explanations (loaded server-side) */
+  studentId?: string;
+  /** Current frustration level from the session's detector */
+  frustrationLevel?: 'none' | 'medium' | 'high';
 }
 
 const MATH_STRATEGIES: ExplanationStrategy[] = [
@@ -70,6 +74,8 @@ export function ExplanationPanel({
   question,
   studentAnswer,
   isCorrect,
+  studentId,
+  frustrationLevel,
 }: ExplanationPanelProps) {
   const [explanation, setExplanation] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -80,6 +86,7 @@ export function ExplanationPanel({
   >([]);
   const [userInput, setUserInput] = useState('');
   const [exchangeCount, setExchangeCount] = useState(0);
+  const [streamError, setStreamError] = useState<string | null>(null);
 
   const strategies =
     question.section === 'math' ? MATH_STRATEGIES : RW_STRATEGIES;
@@ -102,8 +109,9 @@ export function ExplanationPanel({
         student_answer: studentAnswer,
         mode,
         strategy,
-        conversation_history:
-          mode === 'socratic' ? (history ?? conversationHistory) : undefined,
+        conversation_history: history ?? conversationHistory,
+        student_id: studentId,
+        frustration_level: frustrationLevel,
       };
 
       try {
@@ -113,7 +121,14 @@ export function ExplanationPanel({
           body: JSON.stringify(body),
         });
 
-        const reader = response.body!.getReader();
+        if (!response.ok || !response.body) {
+          setExplanation('');
+          setStreamError('The tutor had trouble responding. Tap retry to try again.');
+          setIsStreaming(false);
+          return;
+        }
+
+        const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let accumulated = '';
 
@@ -142,14 +157,19 @@ export function ExplanationPanel({
             ...prev,
             { role: 'assistant', content: accumulated },
           ]);
+          setExplanation('');
+          setStreamError(null);
+        } else {
+          setStreamError('The tutor had trouble responding. Tap retry to try again.');
         }
       } catch {
-        setExplanation('Failed to load explanation. Please try again.');
+        setExplanation('');
+        setStreamError('Connection problem while loading the explanation. Tap retry to try again.');
       }
 
       setIsStreaming(false);
     },
-    [question, studentAnswer, conversationHistory]
+    [question, studentAnswer, conversationHistory, studentId, frustrationLevel]
   );
 
   // Auto-fetch explanation on mount
@@ -177,7 +197,7 @@ export function ExplanationPanel({
     setConversationHistory(updatedHistory);
     setUserInput('');
     setExchangeCount((prev) => prev + 1);
-    fetchExplanation('socratic', currentStrategy, updatedHistory);
+    fetchExplanation(currentMode, currentStrategy, updatedHistory);
   }
 
   function handleHelpButton(prompt: string) {
@@ -208,12 +228,12 @@ export function ExplanationPanel({
           {isCorrect ? (
             <>
               <CheckCircle className="h-5 w-5 text-green-600" />
-              <span className="font-semibold text-green-700">Correct!</span>
+              <span className="font-semibold text-green-700 dark:text-green-400">Correct!</span>
             </>
           ) : (
             <>
-              <XCircle className="h-5 w-5 text-red-600" />
-              <span className="font-semibold text-red-700">
+              <XCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <span className="font-semibold text-red-700 dark:text-red-400">
                 Not quite right
               </span>
             </>
@@ -253,18 +273,48 @@ export function ExplanationPanel({
               type="button"
               onClick={() => handleHelpButton(btn.prompt)}
               disabled={isStreaming}
-              className="rounded-full border border-gray-300 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 disabled:opacity-50"
+              className="rounded-full border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:text-blue-700 dark:hover:text-blue-300 disabled:opacity-50"
             >
               {btn.label}
             </button>
           ))}
         </div>
 
-        {/* Explanation text area */}
-        <div className="whitespace-pre-wrap text-gray-700">
-          {explanation}
-          {isStreaming && (
-            <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-gray-400" />
+        {/* Conversation transcript */}
+        <div className="space-y-3">
+          {conversationHistory.map((msg, i) =>
+            msg.role === 'user' ? (
+              <div key={i} className="flex justify-end">
+                <div className="max-w-[85%] rounded-2xl rounded-br-sm bg-blue-600 px-3.5 py-2 text-sm text-white">
+                  {msg.content}
+                </div>
+              </div>
+            ) : (
+              <div key={i} className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+                {msg.content}
+              </div>
+            )
+          )}
+          {(isStreaming || explanation) && (
+            <div className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">
+              {explanation}
+              {isStreaming && (
+                <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse bg-gray-400" />
+              )}
+            </div>
+          )}
+          {streamError && !isStreaming && (
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 px-3 py-2">
+              <p className="text-sm text-red-700 dark:text-red-400">{streamError}</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fetchExplanation(currentMode, currentStrategy)}
+              >
+                Retry
+              </Button>
+            </div>
           )}
         </div>
 
@@ -279,7 +329,7 @@ export function ExplanationPanel({
                 if (e.key === 'Enter') handleSendMessage(userInput);
               }}
               placeholder={exchangeCount > 0 ? "Enter your response..." : "Ask anything about this question..."}
-              className="flex-1 rounded-md border border-gray-300 px-3 py-2.5 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:py-2 md:text-sm"
+              className="flex-1 rounded-md border border-gray-300 dark:border-gray-700 px-3 py-2.5 text-base focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 md:py-2 md:text-sm"
             />
             <Button
               type="button"
@@ -302,7 +352,7 @@ export function ExplanationPanel({
             size="sm"
             onClick={handleCycleStrategy}
             disabled={isStreaming}
-            className="text-gray-500"
+            className="text-gray-500 dark:text-gray-400"
           >
             <RefreshCw className="h-4 w-4" />
             Try a different explanation

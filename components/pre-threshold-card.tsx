@@ -44,14 +44,14 @@ export function PreThresholdCard({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
           The AI is collecting data on your mistakes to find hidden patterns.
           Insights will be available after {threshold} wrong answers.
         </p>
 
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Progress</span>
+            <span className="text-gray-500 dark:text-gray-400">Progress</span>
             <span className="font-medium">
               {wrongAnswerCount} / {threshold}
             </span>
@@ -60,10 +60,10 @@ export function PreThresholdCard({
         </div>
 
         <div className="pt-2">
-          <h3 className="mb-3 text-sm font-semibold text-gray-700">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
             Dimensions analyzed:
           </h3>
-          <div className="grid grid-cols-2 gap-2 text-xs text-gray-500">
+          <div className="grid grid-cols-2 gap-2 text-xs text-gray-500 dark:text-gray-400">
             {DIMENSION_LABELS.map((label, i) => (
               <span key={label}>
                 {i + 1}. {label}
@@ -72,7 +72,7 @@ export function PreThresholdCard({
           </div>
         </div>
 
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Keep practicing — every wrong answer teaches the AI more about how to
           help you.
         </p>
