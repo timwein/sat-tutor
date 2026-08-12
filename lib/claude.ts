@@ -36,7 +36,7 @@ function buildTutorRequest(params: ExplainParams): TutorRequest {
 
   const promptTemplate = loadPrompt(mode === 'socratic' ? 'tutor-socratic' : 'tutor-direct');
 
-  const systemPrompt = interpolatePrompt(promptTemplate, {
+  let systemPrompt = interpolatePrompt(promptTemplate, {
     student_profile: studentProfile ? JSON.stringify(studentProfile, null, 2) : 'No profile available yet.',
     question_context: JSON.stringify({
       question_id: question.question_id,
@@ -52,6 +52,13 @@ function buildTutorRequest(params: ExplainParams): TutorRequest {
     student_answer: studentAnswer,
     correct_answer: question.correct_answer,
   });
+
+  // Words-in-Context: coach the decode method before revealing meanings.
+  // The student is learning to solve these WITHOUT knowing the hard word.
+  if (question.sub_skill_id === 'RW-05') {
+    systemPrompt +=
+      '\n\nVOCAB COACHING: This is a Words-in-Context question. Before explaining what any hard word means, walk the decode sequence the student is training: (1) the CHARGE the blank needs (positive/negative/neutral) and which words in the passage establish it, (2) the CONTEXT CLUE that signals it (restatement, contrast, cause-effect, example, or parallel structure - name the signal word), (3) only then connect the correct word to the decode, using roots or word-relatives when they help (e.g. credulous -> credible). If the student picked a wrong-charge word, point at the charge test first. Reinforce that unknown words should never be eliminated for being unknown.';
+  }
 
   const selectedStrategy = strategy || getDefaultStrategy(question.section, mode);
 

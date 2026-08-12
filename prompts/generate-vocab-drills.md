@@ -23,7 +23,11 @@ Respond with ONLY a JSON array. Each element:
   "correct_answer": "A"|"B"|"C"|"D",
   "difficulty": 1-5,
   "distractor_analysis": {"A": "why a student might pick this", ...for each wrong choice},
-  "explanation": "why the correct word is precise here and each distractor fails"
+  "explanation": "why the correct word is precise here and each distractor fails",
+  "clue_type": "restatement"|"contrast"|"cause-effect"|"example"|"parallel" (the context-clue type that solves the blank),
+  "charge": "positive"|"negative"|"neutral" (the correct answer's connotation in this passage)
 }
+
+Build each passage around ONE deliberate context clue matching clue_type - vary the clue types across the set.
 
 Vary which letter is correct. No markdown fences - raw JSON only.

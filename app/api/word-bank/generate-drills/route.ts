@@ -3,6 +3,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
 import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
 import { MODELS } from '@/lib/claude';
+import { CLUE_TYPES, CHARGES } from '@/lib/context-clues';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
@@ -147,9 +148,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const validClues = new Set(CLUE_TYPES.map((c) => c.tag));
+    const validCharges = new Set<string>(CHARGES);
     const stamp = Date.now().toString(36);
     const rows = candidates.map((q, i) => {
       const wordRow = wordByText.get(q.word.toLowerCase())!;
+      const extra = q as unknown as { clue_type?: string; charge?: string };
+      const detectiveTags = [
+        ...(validClues.has(extra.clue_type ?? '') ? [`clue:${extra.clue_type}`] : []),
+        ...(validCharges.has(extra.charge ?? '') ? [`charge:${extra.charge}`] : []),
+      ];
       return {
         question_id: `q_wb_${wordRow.normalized_word.replace(/[^a-z]/g, '')}_${stamp}_${i + 1}`,
         source: 'ai_generated',
@@ -164,7 +172,7 @@ export async function POST(request: NextRequest) {
         distractor_analysis: q.distractor_analysis ?? {},
         explanation: q.explanation,
         is_ai_generated: true,
-        tags: [`vocab:${wordRow.normalized_word}`],
+        tags: [`vocab:${wordRow.normalized_word}`, ...detectiveTags],
       };
     });
 

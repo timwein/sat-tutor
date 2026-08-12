@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, Tags } from 'lucide-react';
 
-type Kind = 'grammar' | 'logic';
+type Kind = 'grammar' | 'logic' | 'detective';
 
 interface KindState {
   preview: { total: number; already_tagged: number; to_classify: number } | null;
@@ -23,12 +23,17 @@ const KIND_LABELS: Record<Kind, { title: string; blurb: string }> = {
     title: 'Logic relationships (RW-09)',
     blurb: 'Tags each transitions question with its logic relationship, powering the Transition Gym.',
   },
+  detective: {
+    title: 'Context clues & charge (RW-05)',
+    blurb: 'Tags each Words-in-Context question with its context-clue type and answer charge, powering the Word Detective.',
+  },
 };
 
 export function ClassifyTagsCard() {
   const [state, setState] = useState<Record<Kind, KindState>>({
     grammar: { preview: null, running: false, result: null, error: null },
     logic: { preview: null, running: false, result: null, error: null },
+    detective: { preview: null, running: false, result: null, error: null },
   });
 
   function update(kind: Kind, patch: Partial<KindState>) {
