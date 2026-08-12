@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GraduationCap, Settings as SettingsIcon, Users } from 'lucide-react';
+import { GraduationCap } from 'lucide-react';
 import { Sidebar } from '@/components/sidebar';
 import { BottomNav } from '@/components/bottom-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { MobileMenu } from '@/components/mobile-menu';
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -27,20 +28,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle className="text-gray-500 dark:text-gray-400 active:text-gray-700 dark:active:text-gray-300" />
-          <Link
-            href="/settings"
-            aria-label="Settings"
-            className="text-gray-500 dark:text-gray-400 active:text-gray-700 dark:active:text-gray-300"
-          >
-            <SettingsIcon className="h-5 w-5" />
-          </Link>
-          <Link
-            href="/parent"
-            aria-label="Parent dashboard"
-            className="text-gray-500 dark:text-gray-400 active:text-gray-700 dark:active:text-gray-300"
-          >
-            <Users className="h-5 w-5" />
-          </Link>
+          <MobileMenu />
         </div>
       </header>
 
