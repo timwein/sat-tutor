@@ -16,6 +16,7 @@ import {
   SpellCheck,
   Dumbbell,
   FlaskConical,
+  SearchCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +28,7 @@ const navItems = [
   { label: 'My Progress', href: '/progress', icon: BarChart3 },
   { label: 'Review Queue', href: '/review', icon: RotateCcw },
   { label: 'Word Bank', href: '/word-bank', icon: BookMarked },
+  { label: 'Word Detective', href: '/detective', icon: SearchCheck },
   { label: 'Grammar Map', href: '/grammar', icon: SpellCheck },
   { label: 'Transition Gym', href: '/gym', icon: Dumbbell },
   { label: 'Strategy Lab', href: '/strategy', icon: FlaskConical },

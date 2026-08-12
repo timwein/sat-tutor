@@ -6,6 +6,12 @@ import { createServerClient } from '@/lib/supabase';
 import { MODELS } from '@/lib/claude';
 import { GRAMMAR_RULES, GRAMMAR_TAG_PREFIX } from '@/lib/grammar-rules';
 import { LOGIC_RELATIONSHIPS, LOGIC_TAG_PREFIX } from '@/lib/logic-relationships';
+import {
+  CLUE_TYPES,
+  CLUE_TAG_PREFIX,
+  CHARGE_TAG_PREFIX,
+  CHARGES,
+} from '@/lib/context-clues';
 import type { Question } from '@/lib/types';
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
@@ -18,6 +24,57 @@ interface ClassifyConfig {
   tagPrefix: string;
   validTags: Set<string>;
   taxonomyPrompt: string;
+}
+
+// Word Detective: each RW-05 question gets TWO tags - the context-clue type
+// that solves it, and the charge (connotation) of the correct answer in
+// context. Handled separately from the single-tag kinds below.
+async function classifyDetectiveBatch(
+  batch: Question[]
+): Promise<Map<string, { clue: string; charge: string }>> {
+  const items = batch.map((q) => ({
+    question_id: q.question_id,
+    passage_text: q.passage_text ? q.passage_text.slice(0, 600) : null,
+    question_text: q.question_text,
+    answer_choices: q.answer_choices,
+    correct_answer: q.correct_answer,
+  }));
+
+  const clueTaxonomy = CLUE_TYPES.map(
+    (c) => `- ${c.tag}: ${c.name}. ${c.definition} Signals: ${c.signalWords.join(', ')}.`
+  ).join('\n');
+
+  const response = await anthropic.messages.create({
+    model: MODELS.SONNET,
+    max_tokens: 2500,
+    system: [
+      {
+        type: 'text' as const,
+        text: `You analyze SAT Words-in-Context questions. For each question, identify:\n1. "clue": the single context-clue type a student would use to solve it:\n${clueTaxonomy}\n2. "charge": the connotation of the correct answer AS USED in the passage: "positive", "negative", or "neutral".\n\nRespond with ONLY a JSON object mapping question_id to {"clue": "<tag>", "charge": "<charge>"}. Use only tags from the lists.`,
+        cache_control: { type: 'ephemeral' as const },
+      },
+    ],
+    messages: [{ role: 'user', content: JSON.stringify(items) }],
+  });
+
+  const textBlock = response.content.find((block) => block.type === 'text');
+  const raw = textBlock?.type === 'text' ? textBlock.text : '{}';
+  const jsonString = raw.replace(/```json?\n?/g, '').replace(/```/g, '').trim();
+
+  const validClues = new Set(CLUE_TYPES.map((c) => c.tag));
+  const validCharges = new Set<string>(CHARGES);
+  const result = new Map<string, { clue: string; charge: string }>();
+  try {
+    const parsed = JSON.parse(jsonString) as Record<string, { clue?: string; charge?: string }>;
+    for (const [qid, v] of Object.entries(parsed)) {
+      if (v && validClues.has(v.clue ?? '') && validCharges.has(v.charge ?? '')) {
+        result.set(qid, { clue: v.clue!, charge: v.charge! });
+      }
+    }
+  } catch {
+    // Unparseable batch - skip; re-run picks these up
+  }
+  return result;
 }
 
 function buildConfig(kind: 'grammar' | 'logic'): ClassifyConfig {
@@ -99,10 +156,71 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const kind = body.kind as 'grammar' | 'logic';
-    if (kind !== 'grammar' && kind !== 'logic') {
-      return NextResponse.json({ error: 'kind must be grammar or logic' }, { status: 400 });
+    const kind = body.kind as 'grammar' | 'logic' | 'detective';
+    if (kind !== 'grammar' && kind !== 'logic' && kind !== 'detective') {
+      return NextResponse.json(
+        { error: 'kind must be grammar, logic, or detective' },
+        { status: 400 }
+      );
     }
+
+    if (kind === 'detective') {
+      const supabaseDet = createServerClient();
+      const { data: wicQuestions, error: wicError } = await supabaseDet
+        .from('questions')
+        .select('*')
+        .eq('sub_skill_id', 'RW-05');
+      if (wicError) {
+        return NextResponse.json({ error: 'Failed to load questions' }, { status: 500 });
+      }
+      const allWic = (wicQuestions ?? []) as Question[];
+      const untaggedWic = allWic.filter(
+        (q) => !(q.tags ?? []).some((t) => t.startsWith(CLUE_TAG_PREFIX))
+      );
+      if (body.preview === true) {
+        return NextResponse.json({
+          total: allWic.length,
+          already_tagged: allWic.length - untaggedWic.length,
+          to_classify: untaggedWic.length,
+        });
+      }
+      if (untaggedWic.length === 0) {
+        return NextResponse.json({ classified: 0, total: allWic.length, message: 'Nothing to classify' });
+      }
+      const wicBatches: Question[][] = [];
+      for (let i = 0; i < untaggedWic.length; i += BATCH_SIZE) {
+        wicBatches.push(untaggedWic.slice(i, i + BATCH_SIZE));
+      }
+      const detAssignments = new Map<string, { clue: string; charge: string }>();
+      for (let i = 0; i < wicBatches.length; i += CONCURRENCY) {
+        const chunk = wicBatches.slice(i, i + CONCURRENCY);
+        const results = await Promise.all(chunk.map((b) => classifyDetectiveBatch(b)));
+        for (const r of results) for (const [k, v] of r) detAssignments.set(k, v);
+      }
+      let updatedCount = 0;
+      for (const q of untaggedWic) {
+        const assignment = detAssignments.get(q.question_id);
+        if (!assignment) continue;
+        const newTags = [
+          ...(q.tags ?? []).filter(
+            (t) => !t.startsWith(CLUE_TAG_PREFIX) && !t.startsWith(CHARGE_TAG_PREFIX)
+          ),
+          `${CLUE_TAG_PREFIX}${assignment.clue}`,
+          `${CHARGE_TAG_PREFIX}${assignment.charge}`,
+        ];
+        const { error: updateError } = await supabaseDet
+          .from('questions')
+          .update({ tags: newTags })
+          .eq('question_id', q.question_id);
+        if (!updateError) updatedCount++;
+      }
+      return NextResponse.json({
+        classified: updatedCount,
+        skipped: untaggedWic.length - updatedCount,
+        total: allWic.length,
+      });
+    }
+
     const config = buildConfig(kind);
 
     const supabase = createServerClient();
