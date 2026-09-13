@@ -12,7 +12,11 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   // Active study sessions and practice tests get a minimal layout (no sidebar)
-  const isMinimalLayout = /^\/study\/[^/]+$/.test(pathname) || /^\/practice-test\/[^/]+/.test(pathname);
+  const isMinimalLayout =
+    /^\/study\/[^/]+$/.test(pathname) ||
+    /^\/practice-test\/[^/]+/.test(pathname) ||
+    pathname === '/login' ||
+    pathname === '/reset-password';
 
   if (isMinimalLayout) {
     return <>{children}</>;

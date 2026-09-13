@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { loadPrompt, interpolatePrompt } from './prompt-utils';
 import { MODELS } from './claude';
 import { createServerClient } from './supabase';
@@ -10,10 +10,6 @@ import type {
   InsightItem,
   DimensionDetail,
 } from './types';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
 
 const MAX_WRONG_ANSWERS = 100;
 
@@ -149,7 +145,11 @@ function buildAggregations(
   };
 }
 
-export async function analyzePatterns(studentId: string): Promise<PatternAnalysisResult> {
+/** Run the wrong-answer analysis with the student's own Anthropic client. */
+export async function analyzePatterns(
+  anthropic: Anthropic,
+  studentId: string
+): Promise<PatternAnalysisResult> {
   const supabase = createServerClient();
 
   // Load all wrong question_attempts (excluding skips), capped at most recent 100

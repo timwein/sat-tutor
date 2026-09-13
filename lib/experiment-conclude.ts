@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { MODELS } from '@/lib/claude';
 import {
@@ -10,8 +10,6 @@ import {
   type ArmsState,
 } from '@/lib/strategy-experiments';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
-
 /**
  * Fold a finished drill session's attempts into its experiment arm, and
  * conclude the experiment once every arm has its full set of drills.
@@ -19,6 +17,7 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
  */
 export async function tallyExperimentDrill(
   supabase: SupabaseClient,
+  anthropic: Anthropic | null,
   params: { experimentId: string; arm: string; sessionId: string }
 ): Promise<void> {
   const { experimentId, arm, sessionId } = params;
@@ -55,7 +54,7 @@ export async function tallyExperimentDrill(
     const summaries = summarizeArms(arms);
     const winner = pickWinner(summaries);
     let verdictText: string | null = null;
-    if (winner) {
+    if (winner && anthropic) {
       try {
         const response = await anthropic.messages.create({
           model: MODELS.SONNET,
@@ -83,6 +82,8 @@ export async function tallyExperimentDrill(
       } catch {
         verdictText = null;
       }
+    }
+    if (winner) {
       if (!verdictText) {
         const acc = winner.accuracy !== null ? Math.round(winner.accuracy * 100) : 0;
         verdictText = `${getArm(winner.tag)?.name ?? winner.tag} came out ahead: ${acc}% accuracy at ~${winner.median_seconds_per_question}s per question across ${winner.questions} questions. Directional result - keep using it and re-test before the real exam.`;

@@ -9,6 +9,23 @@ export interface Student {
   parent_email: string | null;
   created_at: string;
   settings: Record<string, unknown>;
+  /** Supabase Auth user this row belongs to (null for legacy rows not yet claimed). */
+  auth_user_id: string | null;
+  is_admin: boolean;
+  /** Encrypted Anthropic API key (lib/crypto.ts). Server-only: never send to the client. */
+  anthropic_key_ciphertext: string | null;
+  anthropic_key_last4: string | null;
+  anthropic_key_added_at: string | null;
+  last_seen_at: string | null;
+}
+
+/** Client-safe view of the signed-in student for layouts and nav. */
+export interface Viewer {
+  id: string;
+  name: string;
+  email: string | null;
+  isAdmin: boolean;
+  hasApiKey: boolean;
 }
 
 export interface SkillRating {

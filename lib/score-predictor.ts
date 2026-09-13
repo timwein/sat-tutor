@@ -1,13 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { loadPrompt, interpolatePrompt } from './prompt-utils';
 import { MODELS } from './claude';
 import { createServerClient } from './supabase';
 import { SKILL_TAXONOMY } from './types';
 import type { SkillRating } from './types';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
 
 const MIN_QUESTIONS_FOR_CLAUDE = 10;
 
@@ -58,7 +54,12 @@ function simpleFormulaPredict(ratings: SkillRating[]): ScorePredictionResult {
   };
 }
 
+/**
+ * Predict a score. `anthropic` is the student's own client; pass `null` when
+ * they have no API key and the Elo-based formula is used instead.
+ */
 export async function predictScore(
+  anthropic: Anthropic | null,
   studentId: string
 ): Promise<ScorePredictionResult> {
   const supabase = createServerClient();
@@ -77,8 +78,8 @@ export async function predictScore(
     0
   );
 
-  // Below threshold: use simple formula
-  if (totalAttempted < MIN_QUESTIONS_FOR_CLAUDE) {
+  // Below threshold (or no API key): use simple formula
+  if (totalAttempted < MIN_QUESTIONS_FOR_CLAUDE || !anthropic) {
     return simpleFormulaPredict(ratings);
   }
 
