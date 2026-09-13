@@ -1,17 +1,13 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { GymClient } from '@/components/gym-client';
 
 export default async function GymPage() {
+  const student = await requireStudent();
+  const studentId = student.id;
   const supabase = createServerClient();
-
-  const { data: student } = await supabase
-    .from('students')
-    .select('id')
-    .limit(1)
-    .single();
-  const studentId = student?.id ?? '';
 
   // How many transitions questions are relationship-tagged (drives a hint
   // to run the classifier if the gym would grade few step-1 answers)

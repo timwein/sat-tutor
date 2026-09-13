@@ -1,5 +1,8 @@
+import type Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
+import { getOptionalAnthropicClient } from '@/lib/anthropic-client';
 import { calculateEloAdjustment, getMasteryLevel } from '@/lib/elo';
 import { classifyError } from '@/lib/claude';
 import { analyzePacing } from '@/lib/pacing-analyzer';
@@ -30,8 +33,10 @@ interface SubmitAnswer {
   confidence_level: 'guessing' | 'okay' | 'confident' | null;
 }
 
-// Throttled error classification: max 3 concurrent calls
+// Throttled error classification: max 3 concurrent calls. A null client
+// records attempts without a classification.
 async function classifyErrorsThrottled(
+  anthropic: Anthropic | null,
   items: Array<{ question: Question; studentAnswer: string; timeSpent: number; confidence: string | null }>
 ): Promise<Map<string, ErrorClassification>> {
   const results = new Map<string, ErrorClassification>();
@@ -41,7 +46,7 @@ async function classifyErrorsThrottled(
     const batch = items.slice(i, i + concurrency);
     const promises = batch.map(async (item) => {
       try {
-        const classification = await classifyError({
+        const classification = await classifyError(anthropic, {
           question: item.question,
           studentAnswer: item.studentAnswer,
           timeSpentSeconds: item.timeSpent,
@@ -61,8 +66,7 @@ async function classifyErrorsThrottled(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, session_id, module_id, answers, is_final = true } = body as {
-      student_id: string;
+    const { session_id, module_id, answers, is_final = true } = body as {
       session_id: string;
       module_id: string;
       answers: SubmitAnswer[];
@@ -70,14 +74,20 @@ export async function POST(request: NextRequest) {
       is_final?: boolean;
     };
 
-    if (!student_id || !session_id || !module_id || !answers?.length) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+    const studentId = student.id;
+
+    if (!session_id || !module_id || !answers?.length) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, session_id, module_id, answers' },
+        { error: 'Missing required fields: session_id, module_id, answers' },
         { status: 400 }
       );
     }
 
     const supabase = createServerClient();
+    const anthropic = getOptionalAnthropicClient(student);
 
     // Load session
     const { data: sessionData, error: sessionError } = await supabase
@@ -95,9 +105,9 @@ export async function POST(request: NextRequest) {
 
     const session = sessionData as Session;
 
-    if (session.student_id !== student_id) {
+    if (session.student_id !== studentId) {
       return NextResponse.json(
-        { error: 'Session does not belong to this student' },
+        { error: 'Session does not belong to this student', code: 'forbidden' },
         { status: 403 }
       );
     }
@@ -125,7 +135,7 @@ export async function POST(request: NextRequest) {
     const { data: existingRatings } = await supabase
       .from('skill_ratings')
       .select('*')
-      .eq('student_id', student_id);
+      .eq('student_id', studentId);
 
     const ratingsMap: Record<string, SkillRating> = {};
     for (const r of (existingRatings || []) as SkillRating[]) {
@@ -161,7 +171,7 @@ export async function POST(request: NextRequest) {
         const { data: newRating } = await supabase
           .from('skill_ratings')
           .insert({
-            student_id,
+            student_id: studentId,
             sub_skill_id: question.sub_skill_id,
             elo_rating: 1000,
             questions_attempted: 0,
@@ -237,7 +247,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Run error classification in batches (throttled)
-    const errorClassifications = await classifyErrorsThrottled(wrongItems);
+    const errorClassifications = await classifyErrorsThrottled(anthropic, wrongItems);
 
     // Apply classifications to results
     for (const result of questionResults) {
@@ -253,7 +263,7 @@ export async function POST(request: NextRequest) {
       const classification = result?.errorClassification;
 
       return {
-        student_id,
+        student_id: studentId,
         session_id,
         question_id: answer.question_id,
         student_answer: answer.student_answer || 'SKIP',
@@ -285,7 +295,7 @@ export async function POST(request: NextRequest) {
         const { data: existingReview } = await supabase
           .from('review_queue')
           .select('id')
-          .eq('student_id', student_id)
+          .eq('student_id', studentId)
           .eq('question_id', result.questionId)
           .single();
 
@@ -302,7 +312,7 @@ export async function POST(request: NextRequest) {
           await supabase
             .from('review_queue')
             .insert({
-              student_id,
+              student_id: studentId,
               question_id: result.questionId,
               next_review_date: tomorrowStr,
               review_count: 0,

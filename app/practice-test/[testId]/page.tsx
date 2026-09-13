@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { TestClient } from './test-client';
 import { FullTestClient } from '@/components/full-test-client';
 import { getArm } from '@/lib/strategy-experiments';
@@ -11,12 +12,14 @@ export default async function PracticeTestSessionPage({
   params: Promise<{ testId: string }>;
 }) {
   const { testId } = await params;
+  const student = await requireStudent();
   const supabase = createServerClient();
 
   const { data: session, error } = await supabase
     .from('sessions')
     .select('*')
     .eq('id', testId)
+    .eq('student_id', student.id)
     .single();
 
   if (error || !session) {
@@ -49,7 +52,7 @@ export default async function PracticeTestSessionPage({
   const { data: concludedExperiment } = await supabase
     .from('strategy_experiments')
     .select('conclusion')
-    .eq('student_id', session.student_id)
+    .eq('student_id', student.id)
     .eq('status', 'concluded')
     .order('concluded_at', { ascending: false })
     .limit(1)
@@ -86,7 +89,7 @@ export default async function PracticeTestSessionPage({
     return (
       <FullTestClient
         sessionId={session.id}
-        studentId={session.student_id}
+        studentId={student.id}
         stageIndex={metadata.stage_index ?? 0}
         stageResults={metadata.stage_results ?? []}
         breakUntil={metadata.break_until ?? null}
@@ -127,7 +130,7 @@ export default async function PracticeTestSessionPage({
   return (
     <TestClient
       sessionId={session.id}
-      studentId={session.student_id}
+      studentId={student.id}
       moduleId={metadata.module_id}
       section={metadata.section}
       timeLimitSeconds={remainingSeconds}

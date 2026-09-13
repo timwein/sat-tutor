@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { LayoutShell } from "@/components/layout-shell";
+import { getCurrentStudent, toViewer } from "@/lib/auth";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,11 +34,22 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Nav needs the viewer, but a failure here (for example the multi-user
+  // migration not yet applied) must not take down every page: render the
+  // bare shell and let the page's own requireStudent() surface the error.
+  let viewer = null;
+  try {
+    const student = await getCurrentStudent();
+    viewer = student ? toViewer(student) : null;
+  } catch (err) {
+    console.error('Root layout: could not resolve the signed-in student:', err);
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -51,7 +63,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <LayoutShell>
+        <LayoutShell viewer={viewer}>
           {children}
         </LayoutShell>
       </body>

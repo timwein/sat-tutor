@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import Anthropic from '@anthropic-ai/sdk';
-import { verifyAccessToken } from '@/lib/parent-auth';
+import { requireApiAdmin } from '@/lib/auth';
+import { getAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
+import { requireParentAccess } from '@/lib/parent-auth';
 import { createServerClient } from '@/lib/supabase';
 import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
 import { MODELS } from '@/lib/claude';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import type { Question } from '@/lib/types';
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 const allSkills = [
   ...SKILL_TAXONOMY.math.map((s) => ({ ...s, section: 'math' as const })),
@@ -46,11 +44,12 @@ function isValidGenerated(q: unknown): q is GeneratedQuestion {
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('parent_access_token')?.value;
-    if (!token || !verifyAccessToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireApiAdmin();
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
+    const parentDenied = await requireParentAccess(student.id);
+    if (parentDenied) return parentDenied;
 
     const body = await request.json();
     const { sub_skill_id, count = 5, difficulty = 3 } = body;
@@ -62,6 +61,7 @@ export async function POST(request: NextRequest) {
     const safeCount = Math.min(Math.max(Number(count) || 5, 1), 10);
     const safeDifficulty = Math.min(Math.max(Number(difficulty) || 3, 1), 5);
 
+    const anthropic = getAnthropicClient(student);
     const supabase = createServerClient();
 
     // A few existing questions as style anchors / duplicate guards
@@ -154,6 +154,9 @@ export async function POST(request: NextRequest) {
       question_ids: (inserted ?? []).map((r) => (r as Question).question_id),
     });
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
+
     console.error('Question generation error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

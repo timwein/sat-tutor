@@ -7,8 +7,15 @@ import { Sidebar } from '@/components/sidebar';
 import { BottomNav } from '@/components/bottom-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { MobileMenu } from '@/components/mobile-menu';
+import type { Viewer } from '@/lib/types';
 
-export function LayoutShell({ children }: { children: React.ReactNode }) {
+export function LayoutShell({
+  viewer,
+  children,
+}: {
+  viewer: Viewer | null;
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
 
   // Active study sessions and practice tests get a minimal layout (no sidebar)
@@ -18,7 +25,8 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
     pathname === '/login' ||
     pathname === '/reset-password';
 
-  if (isMinimalLayout) {
+  // Signed-out pages (login, reset, auth callback) render without chrome
+  if (!viewer || isMinimalLayout) {
     return <>{children}</>;
   }
 
@@ -32,13 +40,13 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle className="text-gray-500 dark:text-gray-400 active:text-gray-700 dark:active:text-gray-300" />
-          <MobileMenu />
+          <MobileMenu viewer={viewer} />
         </div>
       </header>
 
       {/* Desktop sidebar */}
       <div className="hidden md:flex">
-        <Sidebar />
+        <Sidebar viewer={viewer} />
       </div>
 
       {/* Main content */}

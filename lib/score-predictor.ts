@@ -139,20 +139,26 @@ export async function predictScore(
     overall_stats: JSON.stringify(overallStats, null, 2),
   });
 
-  const response = await anthropic.messages.create({
-    model: MODELS.SONNET,
-    max_tokens: 512,
-    system: systemPrompt,
-    messages: [
-      {
-        role: 'user',
-        content: 'Predict this student\'s SAT score. Return JSON only.',
-      },
-    ],
-  });
-
-  const text =
-    response.content[0].type === 'text' ? response.content[0].text : '{}';
+  // Prediction is enrichment, not a gate: a rejected or out-of-credit key
+  // falls back to the formula instead of failing the caller.
+  let text: string;
+  try {
+    const response = await anthropic.messages.create({
+      model: MODELS.SONNET,
+      max_tokens: 512,
+      system: systemPrompt,
+      messages: [
+        {
+          role: 'user',
+          content: 'Predict this student\'s SAT score. Return JSON only.',
+        },
+      ],
+    });
+    text = response.content[0].type === 'text' ? response.content[0].text : '{}';
+  } catch (err) {
+    console.error('Score prediction call failed, using formula:', err);
+    return simpleFormulaPredict(ratings);
+  }
   const jsonString = text
     .replace(/```json?\n?/g, '')
     .replace(/```/g, '')

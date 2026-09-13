@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent, forbiddenResponse } from '@/lib/auth';
 import {
   EXPERIMENT_SKILL_POOL,
   emptyArms,
@@ -7,13 +8,13 @@ import {
   type ArmsState,
 } from '@/lib/strategy-experiments';
 
-/** Current experiment state. Query: ?student_id= */
+/** Current experiment state for the signed-in student. */
 export async function GET(request: NextRequest) {
   try {
-    const studentId = request.nextUrl.searchParams.get('student_id');
-    if (!studentId) {
-      return NextResponse.json({ error: 'Missing student_id' }, { status: 400 });
-    }
+    const auth = await requireApiStudent(request.nextUrl.searchParams.get('student_id'));
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
     const supabase = createServerClient();
     const { data } = await supabase
       .from('strategy_experiments')
@@ -29,27 +30,46 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Body: { student_id, action: 'enroll' } - start the experiment
- *       { student_id, action: 'start_drill' } - assign the next protocol
+ * Body: { action: 'enroll' } - start the experiment
+ *       { action: 'start_drill' } - assign the next protocol
  *         and create its drill session
+ * An optional experiment_id must belong to the signed-in student.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, action } = body;
-    if (!student_id || !action) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
+    const { action } = body;
+    if (!action) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, action' },
+        { error: 'Missing required field: action' },
         { status: 400 }
       );
     }
     const supabase = createServerClient();
 
+    if (typeof body.experiment_id === 'string' && body.experiment_id.length > 0) {
+      const { data: owned } = await supabase
+        .from('strategy_experiments')
+        .select('id, student_id')
+        .eq('id', body.experiment_id)
+        .maybeSingle();
+      if (!owned) {
+        return NextResponse.json({ error: 'Experiment not found' }, { status: 404 });
+      }
+      if (owned.student_id !== studentId) {
+        return forbiddenResponse();
+      }
+    }
+
     if (action === 'enroll') {
       const { data: existing } = await supabase
         .from('strategy_experiments')
         .select('id, status')
-        .eq('student_id', student_id)
+        .eq('student_id', studentId)
         .eq('status', 'running')
         .maybeSingle();
       if (existing) {
@@ -58,7 +78,7 @@ export async function POST(request: NextRequest) {
       const { data: created, error } = await supabase
         .from('strategy_experiments')
         .insert({
-          student_id,
+          student_id: studentId,
           experiment_type: 'reading_protocol',
           status: 'running',
           arms: emptyArms(),
@@ -76,7 +96,7 @@ export async function POST(request: NextRequest) {
       const { data: experiment } = await supabase
         .from('strategy_experiments')
         .select('*')
-        .eq('student_id', student_id)
+        .eq('student_id', studentId)
         .eq('status', 'running')
         .maybeSingle();
       if (!experiment) {
@@ -87,7 +107,7 @@ export async function POST(request: NextRequest) {
       const { data: session, error: sessionError } = await supabase
         .from('sessions')
         .insert({
-          student_id,
+          student_id: studentId,
           session_type: 'quick_drill',
           metadata: {
             experiment_id: experiment.id,

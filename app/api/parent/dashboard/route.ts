@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/parent-auth';
+import { requireApiStudent } from '@/lib/auth';
+import { requireParentAccess } from '@/lib/parent-auth';
 import {
   getParentDashboardData,
   generateParentAlerts,
@@ -8,42 +8,15 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify auth cookie
-    const cookieStore = await cookies();
-    const token = cookieStore.get('parent_access_token')?.value;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const authResult = verifyAccessToken(token);
-    if (!authResult) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
     const { searchParams } = new URL(request.url);
-    const studentId = searchParams.get('student_id');
+    const auth = await requireApiStudent(searchParams.get('student_id'));
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+    const studentId = student.id;
 
-    if (!studentId) {
-      return NextResponse.json(
-        { error: 'Missing required query parameter: student_id' },
-        { status: 400 }
-      );
-    }
-
-    // Verify the token matches the requested student
-    if (authResult.studentId !== studentId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    // The parent PIN token must belong to the signed-in student
+    const parentDenied = await requireParentAccess(studentId);
+    if (parentDenied) return parentDenied;
 
     // Generate alerts before fetching data
     await generateParentAlerts(studentId);

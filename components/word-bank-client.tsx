@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Loader2, Plus, Sparkles } from 'lucide-react';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 
 export interface WordBankWord {
   id: string;
@@ -29,6 +31,12 @@ interface WordBankClientProps {
   initialWords: WordBankWord[];
 }
 
+/** Error from an API response ({ error, code }); key problems render ApiKeyNotice. */
+interface ApiError {
+  code?: string;
+  message: string;
+}
+
 const STATUS_STYLES: Record<string, string> = {
   active: 'bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300',
   mastered: 'bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300',
@@ -41,7 +49,8 @@ export function WordBankClient({ studentId, initialWords }: WordBankClientProps)
   const [adding, setAdding] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
+  const [defineError, setDefineError] = useState<ApiError | null>(null);
   const backfillStarted = useRef(false);
 
   const undrilled = words.filter(
@@ -62,7 +71,17 @@ export function WordBankClient({ studentId, initialWords }: WordBankClientProps)
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ word_id: w.id }),
           });
-          if (!res.ok) continue;
+          if (!res.ok) {
+            const body = await readApiError(res);
+            if (isApiKeyError(body)) {
+              setDefineError({
+                code: body.code,
+                message: apiErrorMessage(body, 'Definitions unavailable'),
+              });
+              break;
+            }
+            continue;
+          }
           const data = await res.json();
           if (data.definition) {
             setWords((prev) =>
@@ -88,8 +107,12 @@ export function WordBankClient({ studentId, initialWords }: WordBankClientProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: studentId, word, source_label: 'Added manually' }),
       });
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({ code: body.code, message: apiErrorMessage(body, 'Failed to add word') });
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed to add word');
       if (data.already_banked) {
         setMessage(`"${word}" is already in your bank.`);
       } else {
@@ -97,8 +120,8 @@ export function WordBankClient({ studentId, initialWords }: WordBankClientProps)
         setMessage(null);
       }
       setNewWord('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add word');
+    } catch {
+      setError({ message: 'Failed to add word' });
     } finally {
       setAdding(false);
     }
@@ -114,8 +137,12 @@ export function WordBankClient({ studentId, initialWords }: WordBankClientProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: studentId }),
       });
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({ code: body.code, message: apiErrorMessage(body, 'Generation failed') });
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Generation failed');
       if (data.generated > 0) {
         setMessage(
           `Generated ${data.generated} drill${data.generated === 1 ? '' : 's'} for ${data.words_drilled} word${data.words_drilled === 1 ? '' : 's'} - they're in your review queue for tomorrow.`
@@ -129,8 +156,8 @@ export function WordBankClient({ studentId, initialWords }: WordBankClientProps)
       } else {
         setMessage(data.message ?? 'Nothing to generate right now.');
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed');
+    } catch {
+      setError({ message: 'Generation failed' });
     } finally {
       setGenerating(false);
     }
@@ -171,11 +198,16 @@ export function WordBankClient({ studentId, initialWords }: WordBankClientProps)
           {message && (
             <p className="mt-3 text-sm text-green-700 dark:text-green-400">{message}</p>
           )}
-          {error && (
-            <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-          )}
+          {error &&
+            (isApiKeyError(error) ? (
+              <ApiKeyNotice code={error.code} message={error.message} className="mt-3" />
+            ) : (
+              <p className="mt-3 text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+            ))}
         </CardContent>
       </Card>
+
+      {defineError && <ApiKeyNotice code={defineError.code} message={defineError.message} />}
 
       {words.length === 0 ? (
         <Card>
@@ -217,6 +249,8 @@ export function WordBankClient({ studentId, initialWords }: WordBankClientProps)
                 </div>
                 {w.definition ? (
                   <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">{w.definition}</p>
+                ) : defineError ? (
+                  <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">Definition pending</p>
                 ) : (
                   <p className="mt-1 flex items-center gap-1.5 text-sm text-gray-400 dark:text-gray-500">
                     <Loader2 className="h-3 w-3 animate-spin" /> Looking up definition...

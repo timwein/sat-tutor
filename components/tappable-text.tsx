@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { BookmarkPlus, Check, Loader2, X } from 'lucide-react';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 
 interface TappableTextProps {
   text: string;
@@ -24,6 +26,14 @@ interface PopoverState {
   top: number;
   left: number;
 }
+
+/** Error from an API response ({ error, code }); key problems render ApiKeyNotice. */
+interface ApiError {
+  code?: string;
+  message: string;
+}
+
+const DEFINE_FALLBACK = "Couldn't load that - tap the word again.";
 
 const WORD_RE = /[A-Za-z][A-Za-z'-]{2,}/g;
 
@@ -61,14 +71,14 @@ export function TappableText({
   const containerRef = useRef<HTMLDivElement>(null);
   const [popover, setPopover] = useState<PopoverState | null>(null);
   const [definition, setDefinition] = useState<WordDefinition | null>(null);
-  const [defError, setDefError] = useState(false);
+  const [defError, setDefError] = useState<ApiError | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState<'added' | 'already' | null>(null);
 
   const close = useCallback(() => {
     setPopover(null);
     setDefinition(null);
-    setDefError(false);
+    setDefError(null);
     setSaving(false);
     setSaved(null);
   }, []);
@@ -100,7 +110,7 @@ export function TappableText({
       left: Math.min(Math.max(spanRect.left - contRect.left, 0), Math.max(contRect.width - 288, 0)),
     });
     setDefinition(null);
-    setDefError(false);
+    setDefError(null);
     setSaved(null);
 
     try {
@@ -109,11 +119,15 @@ export function TappableText({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ word, sentence }),
       });
-      if (!res.ok) throw new Error('define failed');
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setDefError({ code: body.code, message: apiErrorMessage(body, DEFINE_FALLBACK) });
+        return;
+      }
       const data = await res.json();
       setDefinition(data);
     } catch {
-      setDefError(true);
+      setDefError({ message: DEFINE_FALLBACK });
     }
   }
 
@@ -138,7 +152,7 @@ export function TappableText({
       setSaved(data.already_banked ? 'already' : 'added');
     } catch {
       setSaved(null);
-      setDefError(true);
+      setDefError({ message: DEFINE_FALLBACK });
     } finally {
       setSaving(false);
     }
@@ -200,11 +214,12 @@ export function TappableText({
               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Looking it up...
             </p>
           )}
-          {defError && (
-            <p className="mt-2 text-red-600 dark:text-red-400">
-              Couldn&apos;t load that - tap the word again.
-            </p>
-          )}
+          {defError &&
+            (isApiKeyError(defError) ? (
+              <ApiKeyNotice code={defError.code} message={defError.message} className="mt-2" />
+            ) : (
+              <p className="mt-2 text-red-600 dark:text-red-400">{defError.message}</p>
+            ))}
           {definition && (
             <div className="mt-2 space-y-2">
               <p className="text-gray-700 dark:text-gray-300">{definition.definition}</p>

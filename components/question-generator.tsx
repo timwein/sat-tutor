@@ -11,10 +11,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import { SKILL_TAXONOMY } from '@/lib/types';
 
+interface RequestError {
+  code?: string;
+  message: string;
+}
+
 /**
- * Parent tool: generate original AI-written questions for a sub-skill.
+ * Admin tool: generate original AI-written questions for a sub-skill.
  * Useful for sub-skills with thin coverage in the uploaded bank.
  */
 export function QuestionGenerator() {
@@ -22,7 +29,7 @@ export function QuestionGenerator() {
   const [count, setCount] = useState('5');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RequestError | null>(null);
 
   async function generate() {
     setBusy(true);
@@ -34,16 +41,20 @@ export function QuestionGenerator() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sub_skill_id: skill, count: Number(count) }),
       });
-      const data = await res.json();
       if (!res.ok) {
-        setError(data.error ?? 'Generation failed. Please try again.');
+        const body = await readApiError(res);
+        setError({
+          code: body.code,
+          message: apiErrorMessage(body, 'Generation failed. Please try again.'),
+        });
       } else {
+        const data = await res.json();
         setMessage(
           `Added ${data.generated} AI-generated question${data.generated !== 1 ? 's' : ''} to ${skill}. They're marked with an AI badge in the bank and in sessions.`
         );
       }
     } catch {
-      setError('Network error. Please try again.');
+      setError({ message: 'Network error. Please try again.' });
     } finally {
       setBusy(false);
     }
@@ -114,11 +125,14 @@ export function QuestionGenerator() {
         {message && (
           <p className="rounded-lg bg-green-50 dark:bg-green-950/40 p-2 text-sm text-green-700 dark:text-green-400">{message}</p>
         )}
-        {error && (
-          <p className="rounded-lg bg-red-50 dark:bg-red-950/40 p-2 text-sm text-red-700 dark:text-red-400" role="alert">
-            {error}
-          </p>
-        )}
+        {error &&
+          (isApiKeyError(error) ? (
+            <ApiKeyNotice code={error.code} message={error.message} />
+          ) : (
+            <p className="rounded-lg bg-red-50 dark:bg-red-950/40 p-2 text-sm text-red-700 dark:text-red-400" role="alert">
+              {error.message}
+            </p>
+          ))}
       </CardContent>
     </Card>
   );

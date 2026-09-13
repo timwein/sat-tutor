@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import type { SkillRating, ScorePrediction, Session } from '@/lib/types';
 import { getMasteryLevel } from '@/lib/elo';
@@ -11,12 +12,9 @@ import { ProgressChart } from '@/components/progress-chart';
 import { ExperimentPanel } from '@/components/experiment-panel';
 
 export default async function ProgressPage() {
+  const student = await requireStudent();
+  const studentId = student.id;
   const supabase = createServerClient();
-
-  // Load student
-  const { data: student } = await supabase
-    .from('students').select('*').limit(1).single();
-  const studentId = student?.id ?? '';
 
   // Load skill ratings
   const { data: skillRatings } = await supabase

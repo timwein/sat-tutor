@@ -12,6 +12,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import type {
   ClassifiedQuestion,
   ParsedQuestion,
@@ -27,6 +29,40 @@ interface QuestionUploaderProps {
 }
 
 type Step = 'upload' | 'review_types' | 'processing' | 'preview' | 'done';
+
+interface RequestError {
+  code?: string;
+  message: string;
+}
+
+/** Error from a parent API route, carrying its { error, code } body. */
+class ApiRequestError extends Error {
+  code?: string;
+  constructor(message: string, code?: string) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.code = code;
+  }
+}
+
+function toRequestError(err: unknown, fallback: string): RequestError {
+  if (err instanceof ApiRequestError) return { code: err.code, message: err.message };
+  return { message: err instanceof Error ? err.message : fallback };
+}
+
+// The parse route reports failures mid-stream as `__ERROR__:` followed by a
+// JSON { error, code } body (or a plain message).
+function parseStreamError(payload: string): ApiRequestError {
+  try {
+    const data = JSON.parse(payload) as { error?: string; code?: string };
+    if (data && typeof data === 'object' && typeof data.error === 'string') {
+      return new ApiRequestError(data.error, data.code);
+    }
+  } catch {
+    // plain-text payload
+  }
+  return new ApiRequestError(payload || 'Server error');
+}
 
 const SKILL_NAMES: Record<string, string> = {
   'RW-01': 'Central Ideas & Details',
@@ -127,13 +163,11 @@ async function apiCall<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const ct = res.headers.get('content-type') || '';
-    let msg = `Server error (${res.status})`;
-    if (ct.includes('application/json')) {
-      const data = await res.json();
-      msg = data.error || msg;
-    }
-    throw new Error(msg);
+    const data = await readApiError(res);
+    throw new ApiRequestError(
+      apiErrorMessage(data, `Server error (${res.status})`),
+      data.code
+    );
   }
   return res.json();
 }
@@ -146,13 +180,11 @@ async function parseApiCall<T>(body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    const ct = res.headers.get('content-type') || '';
-    let msg = `Server error (${res.status})`;
-    if (ct.includes('application/json')) {
-      const data = await res.json();
-      msg = data.error || msg;
-    }
-    throw new Error(msg);
+    const data = await readApiError(res);
+    throw new ApiRequestError(
+      apiErrorMessage(data, `Server error (${res.status})`),
+      data.code
+    );
   }
 
   // Answers return plain JSON
@@ -174,8 +206,7 @@ async function parseApiCall<T>(body: unknown): Promise<T> {
 
   // Check for server error
   if (accumulated.includes('__ERROR__:')) {
-    const errMsg = accumulated.split('__ERROR__:').pop()?.trim() || 'Server error';
-    throw new Error(errMsg);
+    throw parseStreamError(accumulated.split('__ERROR__:').pop()?.trim() || '');
   }
 
   // Remove the __DONE__ marker
@@ -223,7 +254,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
   const [step, setStep] = useState<Step>('upload');
   const [testLabel, setTestLabel] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RequestError | null>(null);
   const [processingStatus, setProcessingStatus] = useState('');
   const [questions, setQuestions] = useState<ClassifiedQuestion[]>([]);
   const [summary, setSummary] = useState<{
@@ -250,8 +281,8 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
   }
 
   async function handleExtractText() {
-    if (!testLabel.trim()) { setError('Please enter a test label'); return; }
-    if (files.length < 2) { setError('Please upload at least 2 PDF files (questions + answers)'); return; }
+    if (!testLabel.trim()) { setError({ message: 'Please enter a test label' }); return; }
+    if (files.length < 2) { setError({ message: 'Please upload at least 2 PDF files (questions + answers)' }); return; }
 
     setError(null);
     setStep('processing');
@@ -268,7 +299,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       setPdfTexts(extracted);
       setStep('review_types');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to extract text');
+      setError(toRequestError(err, 'Failed to extract text'));
       setStep('upload');
     }
   }
@@ -319,7 +350,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
         { type: 'answers', text: answersText }
       );
 
-      let parsedExplanations: ParsedExplanation[] = [];
+      const parsedExplanations: ParsedExplanation[] = [];
       const warnings: string[] = [];
       if (explanationsTexts.length > 0) {
         const explanationsText = explanationsTexts.map((p) => p.text).join('\n\n');
@@ -380,7 +411,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       });
       setStep('preview');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed');
+      setError(toRequestError(err, 'Upload failed'));
       setStep('upload');
     }
   }
@@ -397,7 +428,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
       setInsertedCount(data.inserted);
       setStep('done');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save');
+      setError(toRequestError(err, 'Failed to save'));
       setStep('preview');
     }
   }
@@ -412,6 +443,17 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
     setInsertedCount(0);
     setPdfTexts([]);
   }
+
+  const errorBanner = error ? (
+    isApiKeyError(error) ? (
+      <ApiKeyNotice code={error.code} message={error.message} />
+    ) : (
+      <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
+        <AlertTriangle className="h-4 w-4 shrink-0" />
+        {error.message}
+      </div>
+    )
+  ) : null;
 
   // Step 1: Upload
   if (step === 'upload') {
@@ -431,12 +473,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
               PDF file. The system will automatically detect which file is which.
             </p>
 
-            {error && (
-              <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                {error}
-              </div>
-            )}
+            {errorBanner}
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Test Label</label>
@@ -517,12 +554,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
               </select>
             </div>
           ))}
-          {error && (
-            <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
-          )}
+          {errorBanner}
           <div className="flex gap-3">
             <Button variant="outline" onClick={() => { setStep('upload'); setPdfTexts([]); }} className="flex-1">Back</Button>
             <Button onClick={handleProcess} className="flex-1">Process PDFs</Button>
@@ -552,12 +584,7 @@ export function QuestionUploader({ studentId }: QuestionUploaderProps) {
 
     return (
       <div className="space-y-4">
-        {error && (
-          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 p-3 text-sm text-red-700 dark:text-red-400">
-            <AlertTriangle className="h-4 w-4 shrink-0" />
-            {error}
-          </div>
-        )}
+        {errorBanner}
 
         <Card>
           <CardHeader><CardTitle>Parsed Results — {testLabel}</CardTitle></CardHeader>

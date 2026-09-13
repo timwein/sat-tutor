@@ -3,15 +3,22 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import { Loader2, Tags } from 'lucide-react';
 
 type Kind = 'grammar' | 'logic' | 'detective';
+
+interface RequestError {
+  code?: string;
+  message: string;
+}
 
 interface KindState {
   preview: { total: number; already_tagged: number; to_classify: number } | null;
   running: boolean;
   result: string | null;
-  error: string | null;
+  error: RequestError | null;
 }
 
 const KIND_LABELS: Record<Kind, { title: string; blurb: string }> = {
@@ -48,13 +55,20 @@ export function ClassifyTagsCard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind, preview: true }),
       });
+      if (!res.ok) {
+        const body = await readApiError(res);
+        update(kind, {
+          running: false,
+          error: { code: body.code, message: apiErrorMessage(body, 'Preview failed') },
+        });
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Preview failed');
       update(kind, { preview: data, running: false });
     } catch (err) {
       update(kind, {
         running: false,
-        error: err instanceof Error ? err.message : 'Preview failed',
+        error: { message: err instanceof Error ? err.message : 'Preview failed' },
       });
     }
   }
@@ -67,8 +81,15 @@ export function ClassifyTagsCard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ kind }),
       });
+      if (!res.ok) {
+        const body = await readApiError(res);
+        update(kind, {
+          running: false,
+          error: { code: body.code, message: apiErrorMessage(body, 'Classification failed') },
+        });
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Classification failed');
       update(kind, {
         running: false,
         preview: null,
@@ -77,7 +98,7 @@ export function ClassifyTagsCard() {
     } catch (err) {
       update(kind, {
         running: false,
-        error: err instanceof Error ? err.message : 'Classification failed',
+        error: { message: err instanceof Error ? err.message : 'Classification failed' },
       });
     }
   }
@@ -130,9 +151,12 @@ export function ClassifyTagsCard() {
               {s.result && (
                 <p className="mt-2 text-xs text-green-700 dark:text-green-400">{s.result}</p>
               )}
-              {s.error && (
-                <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{s.error}</p>
-              )}
+              {s.error &&
+                (isApiKeyError(s.error) ? (
+                  <ApiKeyNotice code={s.error.code} message={s.error.message} className="mt-2" />
+                ) : (
+                  <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">{s.error.message}</p>
+                ))}
             </div>
           );
         })}

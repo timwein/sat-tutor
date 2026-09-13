@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Check, Dumbbell, Loader2, X } from 'lucide-react';
 import { AnswerChoices } from '@/components/answer-choices';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import { LOGIC_RELATIONSHIPS, getLogicRelationship } from '@/lib/logic-relationships';
 import type { SafeQuestion } from '@/lib/types';
 
@@ -27,6 +29,12 @@ interface RoundRecord {
 }
 
 type Phase = 'primer' | 'loading' | 'step1' | 'step2' | 'feedback' | 'summary';
+
+/** Error from an API response ({ error, code }); key problems render ApiKeyNotice. */
+interface ApiError {
+  code?: string;
+  message: string;
+}
 
 export function GymClient({
   studentId,
@@ -49,7 +57,7 @@ export function GymClient({
     explanation: string | null;
   } | null>(null);
   const [rounds, setRounds] = useState<RoundRecord[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const questionStartRef = useRef<number>(0);
   const endingRef = useRef(false);
 
@@ -63,7 +71,12 @@ export function GymClient({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sid, student_id: studentId }),
         });
-        if (!res.ok) throw new Error('Failed to load question');
+        if (!res.ok) {
+          const body = await readApiError(res);
+          setError({ code: body.code, message: apiErrorMessage(body, 'Failed to load question') });
+          setPhase('primer');
+          return;
+        }
         const data = await res.json();
         if (!data.question || answeredSoFar >= DRILL_SIZE) {
           setPhase('summary');
@@ -77,8 +90,8 @@ export function GymClient({
         setFeedback(null);
         questionStartRef.current = Date.now();
         setPhase('step1');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load question');
+      } catch {
+        setError({ message: 'Failed to load question' });
         setPhase('primer');
       }
     },
@@ -99,13 +112,18 @@ export function GymClient({
           metadata: { mode: 'gym' },
         }),
       });
-      if (!res.ok) throw new Error('Failed to start the gym');
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({ code: body.code, message: apiErrorMessage(body, 'Failed to start the gym') });
+        setPhase('primer');
+        return;
+      }
       const { session } = await res.json();
       setSessionId(session.id);
       setRounds([]);
       await fetchNext(session.id, 0);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start the gym');
+    } catch {
+      setError({ message: 'Failed to start the gym' });
       setPhase('primer');
     }
   }
@@ -141,7 +159,11 @@ export function GymClient({
           },
         }),
       });
-      if (!res.ok) throw new Error('Failed to submit answer');
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({ code: body.code, message: apiErrorMessage(body, 'Failed to submit answer') });
+        return;
+      }
       const data = await res.json();
       setFeedback({
         step1Correct,
@@ -161,8 +183,8 @@ export function GymClient({
         },
       ]);
       setPhase('feedback');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit answer');
+    } catch {
+      setError({ message: 'Failed to submit answer' });
     }
   }
 
@@ -254,9 +276,12 @@ export function GymClient({
             Drill RW-08 →
           </button>
         </p>
-        {error && (
-          <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-        )}
+        {error &&
+          (isApiKeyError(error) ? (
+            <ApiKeyNotice code={error.code} message={error.message} />
+          ) : (
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+          ))}
       </div>
     );
   }
@@ -467,9 +492,12 @@ export function GymClient({
         </Card>
       )}
 
-      {error && (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-      )}
+      {error &&
+        (isApiKeyError(error) ? (
+          <ApiKeyNotice code={error.code} message={error.message} />
+        ) : (
+          <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+        ))}
     </div>
   );
 }

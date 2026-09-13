@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
 import {
   FULL_TEST_SEQUENCE,
   getModuleById,
@@ -13,15 +14,18 @@ import {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, session_id, stage_result } = body as {
-      student_id: string;
+    const { session_id, stage_result } = body as {
       session_id: string;
       stage_result?: FullTestStageResult;
     };
 
-    if (!student_id || !session_id) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
+    if (!session_id) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, session_id' },
+        { error: 'Missing required field: session_id' },
         { status: 400 }
       );
     }
@@ -36,8 +40,11 @@ export async function POST(request: NextRequest) {
     if (error || !session) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
-    if (session.student_id !== student_id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (session.student_id !== student.id) {
+      return NextResponse.json(
+        { error: 'Session does not belong to this student', code: 'forbidden' },
+        { status: 403 }
+      );
     }
 
     const metadata = (session.metadata as Record<string, unknown>) ?? {};

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
 import { calculateEloAdjustment, getMasteryLevel } from '@/lib/elo';
 
 import { detectFrustration } from '@/lib/frustration-detector';
@@ -43,7 +44,6 @@ export async function POST(
     const { sessionId } = await params;
     const body = await request.json();
     const {
-      student_id,
       question_id,
       student_answer,
       time_spent_seconds,
@@ -52,10 +52,14 @@ export async function POST(
       metadata,
     } = body;
 
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
     // Validate required fields
-    if (!student_id || !question_id || (!student_answer && !skipped)) {
+    if (!question_id || (!student_answer && !skipped)) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, question_id, student_answer (or skipped)' },
+        { error: 'Missing required fields: question_id, student_answer (or skipped)' },
         { status: 400 }
       );
     }
@@ -94,9 +98,9 @@ export async function POST(
 
     const session = sessionData as Session;
 
-    if (session.student_id !== student_id) {
+    if (session.student_id !== studentId) {
       return NextResponse.json(
-        { error: 'Session does not belong to this student' },
+        { error: 'Session does not belong to this student', code: 'forbidden' },
         { status: 403 }
       );
     }
@@ -117,7 +121,7 @@ export async function POST(
     const { data: existingRating } = await supabase
       .from('skill_ratings')
       .select('*')
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .eq('sub_skill_id', question.sub_skill_id)
       .single();
 
@@ -128,7 +132,7 @@ export async function POST(
       const { data: newRating, error: insertError } = await supabase
         .from('skill_ratings')
         .insert({
-          student_id,
+          student_id: studentId,
           sub_skill_id: question.sub_skill_id,
           elo_rating: 1000,
           questions_attempted: 0,
@@ -189,7 +193,7 @@ export async function POST(
     const { error: attemptInsertError } = await supabase
       .from('question_attempts')
       .insert({
-        student_id,
+        student_id: studentId,
         session_id: sessionId,
         question_id: question.question_id,
         student_answer: effectiveAnswer,
@@ -252,7 +256,7 @@ export async function POST(
       const { data: existingReview } = await supabase
         .from('review_queue')
         .select('id')
-        .eq('student_id', student_id)
+        .eq('student_id', studentId)
         .eq('question_id', question.question_id)
         .single();
 
@@ -269,7 +273,7 @@ export async function POST(
         await supabase
           .from('review_queue')
           .insert({
-            student_id,
+            student_id: studentId,
             question_id: question.question_id,
             next_review_date: tomorrowStr,
             review_count: 0,
@@ -284,7 +288,7 @@ export async function POST(
       const { data: existingReview } = await supabase
         .from('review_queue')
         .select('*')
-        .eq('student_id', student_id)
+        .eq('student_id', studentId)
         .eq('question_id', question.question_id)
         .maybeSingle();
 
@@ -321,12 +325,12 @@ export async function POST(
         const { data: existingWord } = await supabase
           .from('word_bank')
           .select('id')
-          .eq('student_id', student_id)
+          .eq('student_id', studentId)
           .eq('normalized_word', normalized)
           .maybeSingle();
         if (!existingWord) {
           await supabase.from('word_bank').insert({
-            student_id,
+            student_id: studentId,
             word: testedWord,
             normalized_word: normalized,
             context_sentence: question.passage_text
@@ -347,7 +351,7 @@ export async function POST(
       const { data: wordRow } = await supabase
         .from('word_bank')
         .select('id, times_drilled, times_correct, correct_streak, status')
-        .eq('student_id', student_id)
+        .eq('student_id', studentId)
         .eq('normalized_word', normalized)
         .maybeSingle();
       if (wordRow) {

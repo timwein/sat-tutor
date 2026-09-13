@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
+import { getAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
 import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
 import { MODELS } from '@/lib/claude';
 import { CLUE_TYPES, CHARGES } from '@/lib/context-clues';
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 const PER_WORD = 2;
 const WORDS_PER_CALL = 5;
@@ -51,16 +50,15 @@ function isValidDrill(q: unknown): q is GeneratedDrill {
  * Generate Words-in-Context drills for banked words that don't have any yet.
  * Student-triggered (no parent gate). Generated questions enter the review
  * queue due tomorrow, so the existing spaced-repetition loop schedules them.
- *
- * Body: { student_id }
+ * Uses the signed-in student's Anthropic key.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id } = body;
-    if (!student_id) {
-      return NextResponse.json({ error: 'Missing student_id' }, { status: 400 });
-    }
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+    const studentId = student.id;
 
     const supabase = createServerClient();
 
@@ -69,7 +67,7 @@ export async function POST(request: NextRequest) {
     const { count: generatedToday } = await supabase
       .from('word_bank')
       .select('*', { count: 'exact', head: true })
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .gte('drills_generated_at', dayAgo);
 
     const budget = Math.max(0, DAILY_WORD_CAP - (generatedToday ?? 0));
@@ -84,7 +82,7 @@ export async function POST(request: NextRequest) {
     const { data: pendingWords } = await supabase
       .from('word_bank')
       .select('id, word, normalized_word, context_sentence')
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .eq('status', 'active')
       .eq('drills_generated', false)
       .order('added_at', { ascending: true })
@@ -110,6 +108,7 @@ export async function POST(request: NextRequest) {
       ),
     });
 
+    const anthropic = getAnthropicClient(student);
     const response = await anthropic.messages.create({
       model: MODELS.OPUS,
       max_tokens: 12000,
@@ -191,7 +190,7 @@ export async function POST(request: NextRequest) {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
     const reviewRows = (inserted ?? []).map((r) => ({
-      student_id,
+      student_id: studentId,
       question_id: (r as { question_id: string }).question_id,
       next_review_date: tomorrowStr,
       review_count: 0,
@@ -211,7 +210,8 @@ export async function POST(request: NextRequest) {
       await supabase
         .from('word_bank')
         .update({ drills_generated: true, drills_generated_at: now })
-        .eq('id', id);
+        .eq('id', id)
+        .eq('student_id', studentId);
     }
 
     return NextResponse.json({
@@ -220,6 +220,8 @@ export async function POST(request: NextRequest) {
       remaining_words: Math.max(0, words.length - drilledWordIds.length),
     });
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
     console.error('Vocab drill generation error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

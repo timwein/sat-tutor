@@ -19,11 +19,14 @@ import { QuestionUploader } from './question-uploader';
 import { QuestionGenerator } from './question-generator';
 import { ClassifyTagsCard } from './classify-tags-card';
 import { QuestionBankOverview } from './question-bank-overview';
+import { readApiError, apiErrorMessage } from '@/lib/api-errors';
 import type { ParentDashboardData } from '@/lib/parent-dashboard';
 
 interface ParentDashboardShellProps {
   studentId: string;
   hasPinSetup: boolean;
+  /** Question-bank management is shared across students and admin-only. */
+  isAdmin: boolean;
 }
 
 type AuthState = 'loading' | 'needs-setup' | 'needs-auth' | 'authenticated';
@@ -31,6 +34,7 @@ type AuthState = 'loading' | 'needs-setup' | 'needs-auth' | 'authenticated';
 export function ParentDashboardShell({
   studentId,
   hasPinSetup,
+  isAdmin,
 }: ParentDashboardShellProps) {
   const [authState, setAuthState] = useState<AuthState>('loading');
   const [pinDialogOpen, setPinDialogOpen] = useState(false);
@@ -38,9 +42,11 @@ export function ParentDashboardShell({
   const [dashboardData, setDashboardData] =
     useState<ParentDashboardData | null>(null);
   const [loadingData, setLoadingData] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     setLoadingData(true);
+    setDataError(null);
     try {
       const res = await fetch(
         `/api/parent/dashboard?student_id=${encodeURIComponent(studentId)}`
@@ -48,9 +54,18 @@ export function ParentDashboardShell({
       if (res.ok) {
         const data: ParentDashboardData = await res.json();
         setDashboardData(data);
+      } else if (res.status === 401) {
+        // Parent PIN token missing or expired - ask for it again
+        setAuthState('needs-auth');
+        setPinDialogOpen(true);
+      } else {
+        const body = await readApiError(res);
+        setDataError(
+          apiErrorMessage(body, `Failed to load dashboard data (${res.status})`)
+        );
       }
     } catch {
-      // Failed to load data
+      setDataError('Network error. Please try again.');
     } finally {
       setLoadingData(false);
     }
@@ -189,6 +204,22 @@ export function ParentDashboardShell({
   }
 
   // Authenticated — show dashboard
+  if (dataError && !dashboardData) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Could not load dashboard</CardTitle>
+          <CardDescription>{dataError}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" onClick={fetchDashboardData}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (loadingData || !dashboardData) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -215,7 +246,9 @@ export function ParentDashboardShell({
             </Badge>
           )}
         </TabsTrigger>
-        <TabsTrigger value="questions">Question Bank</TabsTrigger>
+        {isAdmin && (
+          <TabsTrigger value="questions">Question Bank</TabsTrigger>
+        )}
       </TabsList>
 
       <TabsContent value="overview">
@@ -236,12 +269,14 @@ export function ParentDashboardShell({
         />
       </TabsContent>
 
-      <TabsContent value="questions" className="space-y-6">
-        <QuestionBankOverview />
-        <QuestionGenerator />
-        <ClassifyTagsCard />
-        <QuestionUploader studentId={studentId} />
-      </TabsContent>
+      {isAdmin && (
+        <TabsContent value="questions" className="space-y-6">
+          <QuestionBankOverview />
+          <QuestionGenerator />
+          <ClassifyTagsCard />
+          <QuestionUploader studentId={studentId} />
+        </TabsContent>
+      )}
     </Tabs>
   );
 }

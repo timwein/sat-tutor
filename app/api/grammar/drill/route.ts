@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
+import { getAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
 import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
 import { MODELS } from '@/lib/claude';
 import { getGrammarRule, GRAMMAR_TAG_PREFIX } from '@/lib/grammar-rules';
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 const DRILL_SIZE = 10;
 
@@ -37,18 +36,24 @@ function isValidItem(q: unknown): q is GeneratedItem {
 
 /**
  * Start a drill for one named grammar rule. Fills thin coverage with
- * AI-generated on-rule questions first, then creates a quick-drill session
- * whose question selection is pinned to the rule's tag.
+ * AI-generated on-rule questions first (using the signed-in student's
+ * Anthropic key), then creates a quick-drill session whose question
+ * selection is pinned to the rule's tag.
  *
- * Body: { student_id, rule: '<rule id or tag>' }
+ * Body: { rule: '<rule id or tag>' }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, rule: ruleParam } = body;
-    if (!student_id || !ruleParam) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+    const studentId = student.id;
+
+    const { rule: ruleParam } = body;
+    if (!ruleParam) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, rule' },
+        { error: 'Missing required field: rule' },
         { status: 400 }
       );
     }
@@ -87,6 +92,7 @@ export async function POST(request: NextRequest) {
         difficulty: '3',
       });
 
+      const anthropic = getAnthropicClient(student);
       const response = await anthropic.messages.create({
         model: MODELS.OPUS,
         max_tokens: 12000,
@@ -147,7 +153,7 @@ export async function POST(request: NextRequest) {
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
       .insert({
-        student_id,
+        student_id: studentId,
         session_type: 'quick_drill',
         metadata: { mode: 'grammar', drill_tag: tag, grammar_rule: rule.id },
       })
@@ -165,6 +171,8 @@ export async function POST(request: NextRequest) {
       generated,
     });
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
     console.error('Grammar drill error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

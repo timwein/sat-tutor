@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent, forbiddenResponse } from '@/lib/auth';
 
 function normalizeWord(word: string): string {
   return word.toLowerCase().replace(/[^a-z'-]/g, '');
 }
 
-/** List the student's word bank. Query: ?student_id= */
+/** List the signed-in student's word bank. */
 export async function GET(request: NextRequest) {
   try {
-    const studentId = request.nextUrl.searchParams.get('student_id');
-    if (!studentId) {
-      return NextResponse.json({ error: 'Missing student_id' }, { status: 400 });
-    }
+    const auth = await requireApiStudent(request.nextUrl.searchParams.get('student_id'));
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
     const supabase = createServerClient();
     const { data, error } = await supabase
       .from('word_bank')
@@ -28,17 +29,21 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Add a word. Body: { student_id, word, context_sentence?, source_question_id?,
+ * Add a word. Body: { word, context_sentence?, source_question_id?,
  * source_label?, from_miss?, definition?, connotation?, part_of_speech?, usage_example? }
  * Idempotent per (student, normalized word): re-adding returns the existing row.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, word } = body;
-    if (!student_id || typeof word !== 'string' || !word.trim()) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
+    const { word } = body;
+    if (typeof word !== 'string' || !word.trim()) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, word' },
+        { error: 'Missing required field: word' },
         { status: 400 }
       );
     }
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await supabase
       .from('word_bank')
       .select('*')
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .eq('normalized_word', normalized)
       .maybeSingle();
 
@@ -67,7 +72,7 @@ export async function POST(request: NextRequest) {
     const { data: inserted, error } = await supabase
       .from('word_bank')
       .insert({
-        student_id,
+        student_id: studentId,
         word: cleaned,
         normalized_word: normalized,
         context_sentence: typeof body.context_sentence === 'string'
@@ -98,19 +103,37 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** Update a word's status. Body: { word_id, status } */
+/** Update a word's status. Body: { word_id, status }. The word must belong to the student. */
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
     const { word_id, status } = body;
     if (!word_id || !['active', 'mastered', 'archived'].includes(status)) {
       return NextResponse.json({ error: 'Invalid word_id or status' }, { status: 400 });
     }
     const supabase = createServerClient();
+
+    const { data: row } = await supabase
+      .from('word_bank')
+      .select('id, student_id')
+      .eq('id', word_id)
+      .maybeSingle();
+    if (!row) {
+      return NextResponse.json({ error: 'Word not found' }, { status: 404 });
+    }
+    if (row.student_id !== studentId) {
+      return forbiddenResponse();
+    }
+
     const { data, error } = await supabase
       .from('word_bank')
       .update({ status })
       .eq('id', word_id)
+      .eq('student_id', studentId)
       .select()
       .single();
     if (error) {

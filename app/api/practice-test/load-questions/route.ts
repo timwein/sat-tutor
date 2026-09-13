@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
 import type { Question, SafeQuestion } from '@/lib/types';
 
 function stripToSafe(q: Question): SafeQuestion {
@@ -19,8 +20,7 @@ function stripToSafe(q: Question): SafeQuestion {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, session_id, section, question_count, difficulty_bias } = body as {
-      student_id: string;
+    const { session_id, section, question_count, difficulty_bias } = body as {
       session_id: string;
       section: string;
       question_count: number;
@@ -28,9 +28,13 @@ export async function POST(request: NextRequest) {
       difficulty_bias?: 'harder' | 'easier';
     };
 
-    if (!student_id || !session_id || !section || !question_count) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
+    if (!session_id || !section || !question_count) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, session_id, section, question_count' },
+        { error: 'Missing required fields: session_id, section, question_count' },
         { status: 400 }
       );
     }
@@ -44,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient();
 
-    // Verify session belongs to student
+    // Verify session belongs to the signed-in student
     const { data: sessionData, error: sessionError } = await supabase
       .from('sessions')
       .select('student_id')
@@ -58,9 +62,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (sessionData.student_id !== student_id) {
+    if (sessionData.student_id !== student.id) {
       return NextResponse.json(
-        { error: 'Session does not belong to this student' },
+        { error: 'Session does not belong to this student', code: 'forbidden' },
         { status: 403 }
       );
     }

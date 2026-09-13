@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import { StudyLauncher } from '@/components/study-launcher';
 
@@ -11,26 +12,20 @@ export default async function StudyPage({
   searchParams: Promise<{ focus?: string }>;
 }) {
   const { focus } = await searchParams;
+  const student = await requireStudent();
   const supabase = createServerClient();
-
-  // Load the first student (no auth yet)
-  const { data: student } = await supabase
-    .from('students')
-    .select('*')
-    .limit(1)
-    .single();
 
   // Load skill ratings
   const { data: skillRatings } = await supabase
     .from('skill_ratings')
     .select('*')
-    .eq('student_id', student?.id ?? '');
+    .eq('student_id', student.id);
 
   // Load recent sessions
   const { data: recentSessions } = await supabase
     .from('sessions')
     .select('*')
-    .eq('student_id', student?.id ?? '')
+    .eq('student_id', student.id)
     .order('started_at', { ascending: false })
     .limit(5);
 
@@ -52,7 +47,7 @@ export default async function StudyPage({
       </p>
 
       <StudyLauncher
-        studentId={student?.id ?? ''}
+        studentId={student.id}
         lowestRatedSkill={focusSkill ?? lowestRated}
         highlightFocus={Boolean(focusSkill)}
         recentSessions={recentSessions ?? []}

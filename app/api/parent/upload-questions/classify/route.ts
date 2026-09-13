@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/parent-auth';
+import { requireApiAdmin } from '@/lib/auth';
+import { getAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
+import { requireParentAccess } from '@/lib/parent-auth';
 import { classifyBatch } from '@/lib/pdf-question-parser';
 import type { MergedQuestion } from '@/lib/pdf-question-parser';
 
@@ -8,11 +9,12 @@ export const maxDuration = 120;
 
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('parent_access_token')?.value;
-    if (!token || !verifyAccessToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireApiAdmin();
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
+    const parentDenied = await requireParentAccess(student.id);
+    if (parentDenied) return parentDenied;
 
     const { batch } = (await request.json()) as {
       batch: MergedQuestion[];
@@ -25,10 +27,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const classifications = await classifyBatch(batch);
+    const anthropic = getAnthropicClient(student);
+    const classifications = await classifyBatch(anthropic, batch);
 
     return NextResponse.json({ classifications });
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
+
     console.error('Classify batch error:', error);
     const message =
       error instanceof Error ? error.message : 'Internal server error';

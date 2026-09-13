@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
 import { hashPin, generateAccessToken } from '@/lib/parent-auth';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, pin } = body;
+    const { pin } = body;
 
-    if (!student_id || !pin) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
+    if (!pin) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, pin' },
+        { error: 'Missing required field: pin' },
         { status: 400 }
       );
     }
@@ -30,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await supabase
       .from('parent_access')
       .select('id')
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .maybeSingle();
 
     if (existing) {
@@ -38,7 +43,7 @@ export async function POST(request: NextRequest) {
       const { error } = await supabase
         .from('parent_access')
         .update({ pin_hash: pinHash })
-        .eq('student_id', student_id);
+        .eq('student_id', studentId);
 
       if (error) {
         console.error('Failed to update parent PIN:', error);
@@ -50,7 +55,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Insert new row
       const { error } = await supabase.from('parent_access').insert({
-        student_id,
+        student_id: studentId,
         pin_hash: pinHash,
       });
 
@@ -65,7 +70,7 @@ export async function POST(request: NextRequest) {
 
     // Setting the PIN proves you know it - sign the parent in immediately
     // instead of asking them to re-enter it.
-    const token = generateAccessToken(student_id);
+    const token = generateAccessToken(studentId);
     (await cookies()).set('parent_access_token', token, {
       httpOnly: true,
       secure: true,

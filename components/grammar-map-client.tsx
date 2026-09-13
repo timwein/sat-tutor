@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Loader2, Target } from 'lucide-react';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import { GRAMMAR_RULES, type GrammarRule } from '@/lib/grammar-rules';
 
 export interface RuleStats {
@@ -17,6 +19,12 @@ interface GrammarMapClientProps {
   studentId: string;
   statsByTag: Record<string, RuleStats>;
   untaggedCount: number;
+}
+
+/** Error from an API response ({ error, code }); key problems render ApiKeyNotice. */
+interface ApiError {
+  code?: string;
+  message: string;
 }
 
 const MIN_ATTEMPTS_FOR_SIGNAL = 3;
@@ -35,7 +43,7 @@ export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: Gramm
   const router = useRouter();
   const [openRule, setOpenRule] = useState<GrammarRule | null>(null);
   const [starting, setStarting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
   async function startDrill(rule: GrammarRule) {
     setStarting(true);
@@ -46,11 +54,16 @@ export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: Gramm
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: studentId, rule: rule.id }),
       });
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({ code: body.code, message: apiErrorMessage(body, 'Failed to start drill') });
+        setStarting(false);
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed to start drill');
       router.push(`/study/${data.session_id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start drill');
+    } catch {
+      setError({ message: 'Failed to start drill' });
       setStarting(false);
     }
   }
@@ -104,9 +117,12 @@ export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: Gramm
                 <><Target className="mr-1 h-4 w-4" /> Drill this rule</>
               )}
             </Button>
-            {error && (
-              <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-            )}
+            {error &&
+              (isApiKeyError(error) ? (
+                <ApiKeyNotice code={error.code} message={error.message} />
+              ) : (
+                <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+              ))}
           </CardContent>
         </Card>
       </div>

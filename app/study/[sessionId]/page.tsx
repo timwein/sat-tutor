@@ -1,4 +1,5 @@
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { SESSION_CONFIGS } from '@/lib/session-manager';
 import { ActiveSession } from '@/components/active-session';
 import { ProtocolBrief } from '@/components/protocol-brief';
@@ -10,13 +11,17 @@ export default async function SessionPage({
   params: Promise<{ sessionId: string }>;
 }) {
   const { sessionId } = await params;
+  const student = await requireStudent();
   const supabase = createServerClient();
 
+  // Scoped to the signed-in student: another student's session id reads as
+  // not found rather than opening their session.
   const { data: sessionData, error } = await supabase
     .from('sessions')
     .select('*')
     .eq('id', sessionId)
-    .single();
+    .eq('student_id', student.id)
+    .maybeSingle();
 
   if (error || !sessionData) {
     return (
@@ -37,7 +42,7 @@ export default async function SessionPage({
   const activeSession = (
     <ActiveSession
       sessionId={sessionId}
-      studentId={session.student_id}
+      studentId={student.id}
       sessionType={session.session_type}
       startedAt={session.started_at}
       maxMinutes={config.durationMinutes}
