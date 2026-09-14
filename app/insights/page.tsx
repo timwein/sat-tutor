@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { PreThresholdCard } from '@/components/pre-threshold-card';
 import { InsightsDashboard } from '@/components/insights-dashboard';
 import { InsightsGeneratePrompt } from '@/components/insights-generate-prompt';
@@ -9,15 +10,9 @@ import type { WrongAnswerInsight } from '@/lib/types';
 const INSIGHT_THRESHOLD = 10;
 
 export default async function InsightsPage() {
+  const student = await requireStudent();
+  const studentId = student.id;
   const supabase = createServerClient();
-
-  // Load student
-  const { data: student } = await supabase
-    .from('students')
-    .select('*')
-    .limit(1)
-    .single();
-  const studentId = student?.id ?? '';
 
   // Count wrong answers (excluding skips)
   const { count: wrongAnswerCount } = await supabase
@@ -40,7 +35,7 @@ export default async function InsightsPage() {
 
   // Resolve evidence question ids referenced by the insight so cards can
   // show the actual questions behind each finding.
-  let evidenceMap: Record<
+  const evidenceMap: Record<
     string,
     { question_id: string; question_text: string; sub_skill_id: string; section: string }
   > = {};

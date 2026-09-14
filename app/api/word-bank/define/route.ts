@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent, forbiddenResponse } from '@/lib/auth';
+import { getAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
 import { MODELS } from '@/lib/claude';
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 const VALID_CONNOTATIONS = new Set(['positive', 'negative', 'neutral']);
 
@@ -14,7 +14,11 @@ interface Definition {
   usage_example: string;
 }
 
-async function defineWord(word: string, sentence: string | null): Promise<Definition | null> {
+async function defineWord(
+  anthropic: Anthropic,
+  word: string,
+  sentence: string | null
+): Promise<Definition | null> {
   const response = await anthropic.messages.create({
     model: MODELS.SONNET,
     max_tokens: 500,
@@ -63,12 +67,17 @@ async function defineWord(word: string, sentence: string | null): Promise<Defini
 /**
  * Define a word in context (for the tap popover), or backfill the
  * definition of an existing word_bank row (auto-banked misses).
+ * Uses the signed-in student's Anthropic key.
  *
  * Body: { word, sentence? } or { word_id }
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const auth = await requireApiStudent();
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
     const supabase = createServerClient();
 
     if (typeof body.word_id === 'string') {
@@ -80,10 +89,14 @@ export async function POST(request: NextRequest) {
       if (!row) {
         return NextResponse.json({ error: 'Word not found' }, { status: 404 });
       }
+      if (row.student_id !== student.id) {
+        return forbiddenResponse();
+      }
       if (row.definition) {
         return NextResponse.json({ definition: row });
       }
-      const def = await defineWord(row.word, row.context_sentence);
+      const anthropic = getAnthropicClient(student);
+      const def = await defineWord(anthropic, row.word, row.context_sentence);
       if (!def) {
         return NextResponse.json({ error: 'Definition unavailable - try again' }, { status: 502 });
       }
@@ -108,12 +121,15 @@ export async function POST(request: NextRequest) {
     const sentence =
       typeof body.sentence === 'string' ? body.sentence.slice(0, 400) : null;
 
-    const def = await defineWord(word, sentence);
+    const anthropic = getAnthropicClient(student);
+    const def = await defineWord(anthropic, word, sentence);
     if (!def) {
       return NextResponse.json({ error: 'Definition unavailable - try again' }, { status: 502 });
     }
     return NextResponse.json({ word, ...def });
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
     console.error('Define word error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

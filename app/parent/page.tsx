@@ -1,22 +1,18 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent, isAdmin } from '@/lib/auth';
 import { ParentDashboardShell } from '@/components/parent-dashboard-shell';
 
 export default async function ParentPage() {
+  const student = await requireStudent();
   const supabase = createServerClient();
-  const { data: student } = await supabase
-    .from('students')
-    .select('*')
-    .limit(1)
-    .single();
-  const studentId = student?.id ?? '';
 
   // Check if PIN is set up
   const { data: pinData } = await supabase
     .from('parent_access')
     .select('id')
-    .eq('student_id', studentId)
+    .eq('student_id', student.id)
     .maybeSingle();
 
   return (
@@ -26,8 +22,9 @@ export default async function ParentPage() {
         Monitor your student&apos;s progress and study habits.
       </p>
       <ParentDashboardShell
-        studentId={studentId}
+        studentId={student.id}
         hasPinSetup={!!pinData}
+        isAdmin={isAdmin(student)}
       />
     </div>
   );

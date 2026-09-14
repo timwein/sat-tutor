@@ -1,33 +1,25 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { PracticeTestLauncher } from '@/components/practice-test-launcher';
 import type { Session } from '@/lib/types';
 
 export default async function PracticeTestPage() {
+  const student = await requireStudent();
   const supabase = createServerClient();
 
-  const { data: student } = await supabase
-    .from('students')
-    .select('id')
-    .limit(1)
-    .single();
-
-  const studentId = student?.id ?? '';
-
-  const { data: sessions } = studentId
-    ? await supabase
-        .from('sessions')
-        .select('*')
-        .eq('student_id', studentId)
-        .eq('session_type', 'timed_section')
-        .order('started_at', { ascending: false })
-        .limit(5)
-    : { data: [] };
+  const { data: sessions } = await supabase
+    .from('sessions')
+    .select('*')
+    .eq('student_id', student.id)
+    .eq('session_type', 'timed_section')
+    .order('started_at', { ascending: false })
+    .limit(5);
 
   return (
     <PracticeTestLauncher
-      studentId={studentId}
+      studentId={student.id}
       recentSessions={(sessions ?? []) as Session[]}
     />
   );

@@ -1,10 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { loadPrompt, interpolatePrompt } from './prompt-utils';
 import { MODELS } from './claude';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+// Every Claude call takes the caller's own client (built per request with
+// getAnthropicClient() from ./anthropic-client) as its first argument.
 
 // ============================================
 // Types
@@ -125,8 +124,13 @@ function extractJsonFromResponse(text: string): string {
   return cleaned;
 }
 
-async function callClaude(label: string, systemPrompt: string, maxTokens: number): Promise<string> {
-  return callClaudeStreaming(label, systemPrompt, maxTokens);
+async function callClaude(
+  anthropic: Anthropic,
+  label: string,
+  systemPrompt: string,
+  maxTokens: number
+): Promise<string> {
+  return callClaudeStreaming(anthropic, label, systemPrompt, maxTokens);
 }
 
 /**
@@ -134,6 +138,7 @@ async function callClaude(label: string, systemPrompt: string, maxTokens: number
  * Returns the full accumulated text when done.
  */
 export async function callClaudeStreaming(
+  anthropic: Anthropic,
   label: string,
   systemPrompt: string,
   maxTokens: number,
@@ -190,25 +195,32 @@ function splitTextByModule(pdfText: string): { label: string; text: string }[] {
   return chunks.length > 0 ? chunks : [{ label: 'all', text: pdfText }];
 }
 
-export async function parseQuestionsPdf(pdfText: string): Promise<ParsedQuestion[]> {
+export async function parseQuestionsPdf(
+  anthropic: Anthropic,
+  pdfText: string
+): Promise<ParsedQuestion[]> {
   const chunks = splitTextByModule(pdfText);
   console.log(`[parseQuestionsPdf] textLength=${pdfText.length} chunks=${chunks.length} labels=[${chunks.map(c => c.label).join(', ')}]`);
 
   if (chunks.length > 1) {
     const results = await Promise.all(
-      chunks.map((chunk, i) => parseSingleQuestionsChunk(chunk.text, `questions-chunk${i+1}(${chunk.label})`))
+      chunks.map((chunk, i) => parseSingleQuestionsChunk(anthropic, chunk.text, `questions-chunk${i+1}(${chunk.label})`))
     );
     return results.flat();
   }
 
-  return parseSingleQuestionsChunk(pdfText, 'questions-all');
+  return parseSingleQuestionsChunk(anthropic, pdfText, 'questions-all');
 }
 
-async function parseSingleQuestionsChunk(pdfText: string, label: string): Promise<ParsedQuestion[]> {
+async function parseSingleQuestionsChunk(
+  anthropic: Anthropic,
+  pdfText: string,
+  label: string
+): Promise<ParsedQuestion[]> {
   const template = loadPrompt('pdf-parse-questions');
   const systemPrompt = interpolatePrompt(template, { pdf_text: pdfText });
 
-  const responseText = await callClaude(label, systemPrompt, 32000);
+  const responseText = await callClaude(anthropic, label, systemPrompt, 32000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
@@ -227,12 +239,15 @@ async function parseSingleQuestionsChunk(pdfText: string, label: string): Promis
   }
 }
 
-export async function parseAnswersPdf(pdfText: string): Promise<ParsedAnswer[]> {
+export async function parseAnswersPdf(
+  anthropic: Anthropic,
+  pdfText: string
+): Promise<ParsedAnswer[]> {
   console.log(`[parseAnswersPdf] textLength=${pdfText.length}`);
   const template = loadPrompt('pdf-parse-answers');
   const systemPrompt = interpolatePrompt(template, { pdf_text: pdfText });
 
-  const responseText = await callClaude('answers', systemPrompt, 4000);
+  const responseText = await callClaude(anthropic, 'answers', systemPrompt, 4000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
@@ -247,25 +262,32 @@ export async function parseAnswersPdf(pdfText: string): Promise<ParsedAnswer[]> 
   }
 }
 
-export async function parseExplanationsPdf(pdfText: string): Promise<ParsedExplanation[]> {
+export async function parseExplanationsPdf(
+  anthropic: Anthropic,
+  pdfText: string
+): Promise<ParsedExplanation[]> {
   const chunks = splitTextByModule(pdfText);
   console.log(`[parseExplanationsPdf] textLength=${pdfText.length} chunks=${chunks.length} labels=[${chunks.map(c => c.label).join(', ')}]`);
 
   if (chunks.length > 1) {
     const results = await Promise.all(
-      chunks.map((chunk, i) => parseSingleExplanationsChunk(chunk.text, `explanations-chunk${i+1}(${chunk.label})`))
+      chunks.map((chunk, i) => parseSingleExplanationsChunk(anthropic, chunk.text, `explanations-chunk${i+1}(${chunk.label})`))
     );
     return results.flat();
   }
 
-  return parseSingleExplanationsChunk(pdfText, 'explanations-all');
+  return parseSingleExplanationsChunk(anthropic, pdfText, 'explanations-all');
 }
 
-async function parseSingleExplanationsChunk(pdfText: string, label: string): Promise<ParsedExplanation[]> {
+async function parseSingleExplanationsChunk(
+  anthropic: Anthropic,
+  pdfText: string,
+  label: string
+): Promise<ParsedExplanation[]> {
   const template = loadPrompt('pdf-parse-explanations');
   const systemPrompt = interpolatePrompt(template, { pdf_text: pdfText });
 
-  const responseText = await callClaude(label, systemPrompt, 32000);
+  const responseText = await callClaude(anthropic, label, systemPrompt, 32000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
@@ -364,6 +386,7 @@ export interface ClassificationResult {
 }
 
 export async function classifyBatch(
+  anthropic: Anthropic,
   batch: MergedQuestion[]
 ): Promise<ClassificationResult[]> {
   const questionsForClaude = batch.map((q) => ({
@@ -381,7 +404,7 @@ export async function classifyBatch(
     questions_json: JSON.stringify(questionsForClaude, null, 2),
   });
 
-  const responseText = await callClaude(`classify-batch(${batch.length})`, systemPrompt, 2000);
+  const responseText = await callClaude(anthropic, `classify-batch(${batch.length})`, systemPrompt, 2000);
   const jsonStr = extractJsonFromResponse(responseText);
 
   try {
@@ -398,6 +421,7 @@ export async function classifyBatch(
 }
 
 export async function classifyQuestions(
+  anthropic: Anthropic,
   questions: MergedQuestion[]
 ): Promise<ClassifiedQuestion[]> {
   const BATCH_SIZE = 15;
@@ -405,7 +429,7 @@ export async function classifyQuestions(
 
   for (let i = 0; i < questions.length; i += BATCH_SIZE) {
     const batch = questions.slice(i, i + BATCH_SIZE);
-    const results = await classifyBatch(batch);
+    const results = await classifyBatch(anthropic, batch);
     for (const r of results) {
       allClassifications.set(matchKey(r.module, r.questionNumber), r);
     }
@@ -452,6 +476,7 @@ export function generateQuestionId(
 // ============================================
 
 export async function processUploadedPdfs(
+  anthropic: Anthropic,
   files: { name: string; buffer: Buffer }[],
   testLabel: string
 ): Promise<UploadResult> {
@@ -462,10 +487,11 @@ export async function processUploadedPdfs(
     pdfTexts.push({ type, text, name: file.name });
   }
 
-  return processFromTexts(pdfTexts, testLabel);
+  return processFromTexts(anthropic, pdfTexts, testLabel);
 }
 
 export async function processExtractedTexts(
+  anthropic: Anthropic,
   texts: { name: string; text: string }[],
   testLabel: string
 ): Promise<UploadResult> {
@@ -475,10 +501,11 @@ export async function processExtractedTexts(
     name: t.name,
   }));
 
-  return processFromTexts(pdfTexts, testLabel);
+  return processFromTexts(anthropic, pdfTexts, testLabel);
 }
 
 async function processFromTexts(
+  anthropic: Anthropic,
   pdfTexts: { type: PdfType; text: string; name: string }[],
   testLabel: string
 ): Promise<UploadResult> {
@@ -508,13 +535,13 @@ async function processFromTexts(
   const explanationsText = explanationsPdfs.map((p) => p.text).join('\n\n');
 
   const [parsedQuestions, parsedAnswers] = await Promise.all([
-    parseQuestionsPdf(questionsText),
-    parseAnswersPdf(answersText),
+    parseQuestionsPdf(anthropic, questionsText),
+    parseAnswersPdf(anthropic, answersText),
   ]);
 
   let parsedExplanations: ParsedExplanation[] = [];
   if (explanationsPdfs.length > 0) {
-    parsedExplanations = await parseExplanationsPdf(explanationsText);
+    parsedExplanations = await parseExplanationsPdf(anthropic, explanationsText);
   } else {
     warnings.push('No explanations PDF detected — questions will have no explanations.');
   }
@@ -528,7 +555,7 @@ async function processFromTexts(
   warnings.push(...matchWarnings);
 
   // 5. Classify with Claude
-  const classified = await classifyQuestions(merged);
+  const classified = await classifyQuestions(anthropic, merged);
 
   return {
     questions: classified,

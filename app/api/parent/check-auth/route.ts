@@ -1,9 +1,14 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { requireApiStudent } from '@/lib/auth';
 import { verifyAccessToken } from '@/lib/parent-auth';
 
 export async function GET() {
   try {
+    const auth = await requireApiStudent();
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
     const cookieStore = await cookies();
     const token = cookieStore.get('parent_access_token')?.value;
 
@@ -13,13 +18,13 @@ export async function GET() {
 
     const result = verifyAccessToken(token);
 
-    if (!result) {
+    if (!result || result.studentId !== student.id) {
       return NextResponse.json({ authenticated: false });
     }
 
     return NextResponse.json({
       authenticated: true,
-      studentId: result.studentId,
+      studentId: student.id,
     });
   } catch (error) {
     console.error('Check auth error:', error);

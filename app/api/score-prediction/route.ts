@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
+import { getOptionalAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
 import { predictScore } from '@/lib/score-predictor';
 import type { ScorePrediction } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const studentId = searchParams.get('student_id');
-
-    if (!studentId) {
-      return NextResponse.json(
-        { error: 'Missing required query parameter: student_id' },
-        { status: 400 }
-      );
-    }
+    const auth = await requireApiStudent(searchParams.get('student_id'));
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
 
     const supabase = createServerClient();
 
@@ -40,23 +37,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id } = body;
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+    const studentId = student.id;
 
-    if (!student_id) {
-      return NextResponse.json(
-        { error: 'Missing required field: student_id' },
-        { status: 400 }
-      );
-    }
-
-    const result = await predictScore(student_id);
+    // Students without an API key still get the Elo-based formula prediction
+    const anthropic = getOptionalAnthropicClient(student);
+    const result = await predictScore(anthropic, studentId);
 
     const supabase = createServerClient();
 
     const { data: saved, error: saveError } = await supabase
       .from('score_predictions')
       .insert({
-        student_id,
+        student_id: studentId,
         total_score_low: result.totalScoreLow,
         total_score_mid: result.totalScoreMid,
         total_score_high: result.totalScoreHigh,
@@ -77,6 +72,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ prediction: saved as ScorePrediction });
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
+
     console.error('Score prediction POST error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

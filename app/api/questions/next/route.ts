@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
 import { SESSION_CONFIGS, getSessionPhase, isSessionComplete } from '@/lib/session-manager';
 import { detectFrustration } from '@/lib/frustration-detector';
 import { selectNextQuestion } from '@/lib/question-selector';
@@ -31,11 +32,15 @@ function stripToSafeQuestion(q: Question): SafeQuestion {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { session_id, student_id, prefer_strength } = body;
+    const { session_id, prefer_strength } = body;
 
-    if (!session_id || !student_id) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
+    if (!session_id) {
       return NextResponse.json(
-        { error: 'Missing required fields: session_id, student_id' },
+        { error: 'Missing required field: session_id' },
         { status: 400 }
       );
     }
@@ -65,9 +70,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (typedSession.student_id !== student_id) {
+    if (typedSession.student_id !== studentId) {
       return NextResponse.json(
-        { error: 'Session does not belong to this student' },
+        { error: 'Session does not belong to this student', code: 'forbidden' },
         { status: 403 }
       );
     }
@@ -93,7 +98,7 @@ export async function POST(request: NextRequest) {
     const { data: skillRatings, error: ratingsError } = await supabase
       .from('skill_ratings')
       .select('*')
-      .eq('student_id', student_id);
+      .eq('student_id', studentId);
 
     if (ratingsError) {
       console.error('Failed to load skill ratings:', ratingsError);
@@ -110,7 +115,7 @@ export async function POST(request: NextRequest) {
     const { data: reviewItems, error: reviewError } = await supabase
       .from('review_queue')
       .select('*')
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .lte('next_review_date', today);
 
     if (reviewError) {
@@ -223,7 +228,9 @@ export async function POST(request: NextRequest) {
       const { data: tagQuestions, error: tagError } = await supabase
         .from('questions')
         .select('*')
-        .contains('tags', [drillTag]);
+        .contains('tags', [drillTag])
+        // Shared bank plus this student's own private drills
+        .or(`created_by_student_id.is.null,created_by_student_id.eq.${studentId}`);
       if (tagError) {
         console.error('Failed to load tagged questions:', tagError);
         return NextResponse.json({ error: 'Failed to load questions' }, { status: 500 });
@@ -277,7 +284,7 @@ export async function POST(request: NextRequest) {
       const { data: studentRow } = await supabase
         .from('students')
         .select('settings')
-        .eq('id', student_id)
+        .eq('id', studentId)
         .single();
       const settings = (studentRow?.settings as Record<string, unknown> | null) ?? {};
       if (settings.rw_focus === true && Math.random() < 0.75) {
@@ -295,7 +302,9 @@ export async function POST(request: NextRequest) {
 
     let lightQuery = supabase
       .from('questions')
-      .select('id, question_id, sub_skill_id, difficulty, section');
+      .select('id, question_id, sub_skill_id, difficulty, section')
+      // Shared bank plus this student's own private drills
+      .or(`created_by_student_id.is.null,created_by_student_id.eq.${studentId}`);
     if (subSkillFocus) {
       lightQuery = lightQuery.eq('sub_skill_id', subSkillFocus);
     } else if (skillPool && skillPool.length > 0) {

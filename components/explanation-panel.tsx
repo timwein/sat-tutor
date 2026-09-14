@@ -4,7 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, RefreshCw, Send } from 'lucide-react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ApiKeyNotice } from '@/components/api-key-notice';
 import { cn } from '@/lib/utils';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import type {
   Question,
   TutorMode,
@@ -35,6 +37,8 @@ const RW_STRATEGIES: ExplanationStrategy[] = [
   'paraphrase_method',
   'pattern_recognition',
 ];
+
+const GENERIC_TUTOR_ERROR = 'The tutor had trouble responding. Tap retry to try again.';
 
 interface HelpButton {
   label: string;
@@ -87,6 +91,8 @@ export function ExplanationPanel({
   const [userInput, setUserInput] = useState('');
   const [exchangeCount, setExchangeCount] = useState(0);
   const [streamError, setStreamError] = useState<string | null>(null);
+  /** Error code from the API ({ error, code }); key problems render ApiKeyNotice. */
+  const [streamErrorCode, setStreamErrorCode] = useState<string | null>(null);
 
   const strategies =
     question.section === 'math' ? MATH_STRATEGIES : RW_STRATEGIES;
@@ -121,9 +127,19 @@ export function ExplanationPanel({
           body: JSON.stringify(body),
         });
 
-        if (!response.ok || !response.body) {
+        if (!response.ok) {
+          const errorBody = await readApiError(response);
           setExplanation('');
-          setStreamError('The tutor had trouble responding. Tap retry to try again.');
+          setStreamErrorCode(errorBody.code ?? null);
+          setStreamError(apiErrorMessage(errorBody, GENERIC_TUTOR_ERROR));
+          setIsStreaming(false);
+          return;
+        }
+
+        if (!response.body) {
+          setExplanation('');
+          setStreamErrorCode(null);
+          setStreamError(GENERIC_TUTOR_ERROR);
           setIsStreaming(false);
           return;
         }
@@ -131,6 +147,8 @@ export function ExplanationPanel({
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let accumulated = '';
+        // Error frame emitted mid-stream: data: {"error": ..., "code"?: ...}
+        let frameError: { error?: string; code?: string } | null = null;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -144,6 +162,8 @@ export function ExplanationPanel({
                 if (data.text) {
                   accumulated += data.text;
                   setExplanation(accumulated);
+                } else if (typeof data.error === 'string') {
+                  frameError = { error: data.error, code: data.code };
                 }
               } catch {
                 // skip malformed JSON chunks
@@ -159,11 +179,14 @@ export function ExplanationPanel({
           ]);
           setExplanation('');
           setStreamError(null);
+          setStreamErrorCode(null);
         } else {
-          setStreamError('The tutor had trouble responding. Tap retry to try again.');
+          setStreamErrorCode(frameError?.code ?? null);
+          setStreamError(apiErrorMessage(frameError, GENERIC_TUTOR_ERROR));
         }
       } catch {
         setExplanation('');
+        setStreamErrorCode(null);
         setStreamError('Connection problem while loading the explanation. Tap retry to try again.');
       }
 
@@ -304,17 +327,31 @@ export function ExplanationPanel({
             </div>
           )}
           {streamError && !isStreaming && (
-            <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 px-3 py-2">
-              <p className="text-sm text-red-700 dark:text-red-400">{streamError}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fetchExplanation(currentMode, currentStrategy)}
-              >
-                Retry
-              </Button>
-            </div>
+            isApiKeyError({ code: streamErrorCode ?? undefined }) ? (
+              <div className="space-y-2">
+                <ApiKeyNotice code={streamErrorCode} message={streamError} />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchExplanation(currentMode, currentStrategy)}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 dark:bg-red-950/40 px-3 py-2">
+                <p className="text-sm text-red-700 dark:text-red-400">{streamError}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fetchExplanation(currentMode, currentStrategy)}
+                >
+                  Retry
+                </Button>
+              </div>
+            )
           )}
         </div>
 

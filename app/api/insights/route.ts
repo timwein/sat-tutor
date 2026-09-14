@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
+import { getAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
 import { analyzePatterns } from '@/lib/pattern-analyzer';
 import type { WrongAnswerInsight } from '@/lib/types';
 
@@ -8,14 +10,9 @@ const INSIGHT_THRESHOLD = 10;
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const studentId = searchParams.get('student_id');
-
-    if (!studentId) {
-      return NextResponse.json(
-        { error: 'Missing required query parameter: student_id' },
-        { status: 400 }
-      );
-    }
+    const auth = await requireApiStudent(searchParams.get('student_id'));
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
 
     const supabase = createServerClient();
 
@@ -63,14 +60,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id } = body;
-
-    if (!student_id) {
-      return NextResponse.json(
-        { error: 'Missing required field: student_id' },
-        { status: 400 }
-      );
-    }
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+    const studentId = student.id;
 
     const supabase = createServerClient();
 
@@ -78,7 +71,7 @@ export async function POST(request: NextRequest) {
     const { count: wrongCount } = await supabase
       .from('question_attempts')
       .select('*', { count: 'exact', head: true })
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .eq('is_correct', false)
       .neq('student_answer', 'SKIP');
 
@@ -91,14 +84,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Run pattern analysis (this calls Claude Opus)
-    const result = await analyzePatterns(student_id);
+    // Run pattern analysis with the student's own key (this calls Claude Opus)
+    const anthropic = getAnthropicClient(student);
+    const result = await analyzePatterns(anthropic, studentId);
 
     // Save to wrong_answer_insights table
     const { data: saved, error: saveError } = await supabase
       .from('wrong_answer_insights')
       .insert({
-        student_id,
+        student_id: studentId,
         total_wrong_answers_analyzed: result.totalWrongAnswersAnalyzed,
         top_insights: result.topInsights,
         dimension_details: result.dimensionDetails,
@@ -117,6 +111,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(saved as WrongAnswerInsight);
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
+
     console.error('Insights POST error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

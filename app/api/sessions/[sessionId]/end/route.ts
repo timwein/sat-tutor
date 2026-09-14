@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
-import Anthropic from '@anthropic-ai/sdk';
+import { requireApiStudent } from '@/lib/auth';
+import { getOptionalAnthropicClient } from '@/lib/anthropic-client';
 import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
 import { MODELS, classifyError } from '@/lib/claude';
 
@@ -11,10 +12,6 @@ const VALID_ERROR_TYPES = new Set([
 import { predictScore } from '@/lib/score-predictor';
 import type { Session, QuestionAttempt, Question } from '@/lib/types';
 import { SKILL_TAXONOMY } from '@/lib/types';
-
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
 
 function lookupSubSkillName(subSkillId: string): string {
   const allSkills = [
@@ -32,14 +29,15 @@ export async function POST(
   try {
     const { sessionId } = await params;
     const body = await request.json();
-    const { student_id } = body;
 
-    if (!student_id) {
-      return NextResponse.json(
-        { error: 'Missing required field: student_id' },
-        { status: 400 }
-      );
-    }
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+    const studentId = student.id;
+
+    // Summary, classification, prediction and experiment verdicts are all
+    // optional enrichment; each falls back to its non-AI path without a key.
+    const anthropic = getOptionalAnthropicClient(student);
 
     const supabase = createServerClient();
 
@@ -59,9 +57,9 @@ export async function POST(
 
     const session = sessionData as Session;
 
-    if (session.student_id !== student_id) {
+    if (session.student_id !== studentId) {
       return NextResponse.json(
-        { error: 'Session does not belong to this student' },
+        { error: 'Session does not belong to this student', code: 'forbidden' },
         { status: 403 }
       );
     }
@@ -88,7 +86,7 @@ export async function POST(
 
     // Load questions for these attempts
     const questionIds = [...new Set(typedAttempts.map((a) => a.question_id))];
-    let questionsMap: Record<string, Question> = {};
+    const questionsMap: Record<string, Question> = {};
 
     if (questionIds.length > 0) {
       const { data: questions } = await supabase
@@ -105,22 +103,28 @@ export async function POST(
 
     // ----- Batched error classification -----
     // Wrong answers are classified here (not per-attempt during the session)
-    // so submits stay fast; run with limited concurrency, non-fatal.
-    const toClassify = typedAttempts.filter(
-      (a) => !a.is_correct && a.student_answer !== 'SKIP' && !a.error_type && questionsMap[a.question_id]
-    );
+    // so submits stay fast; run with limited concurrency, non-fatal. Without
+    // a key nothing is classified and the attempts are left untouched.
+    const toClassify = anthropic
+      ? typedAttempts.filter(
+          (a) => !a.is_correct && a.student_answer !== 'SKIP' && !a.error_type && questionsMap[a.question_id]
+        )
+      : [];
     const CLASSIFY_CONCURRENCY = 3;
     for (let i = 0; i < toClassify.length; i += CLASSIFY_CONCURRENCY) {
       const batch = toClassify.slice(i, i + CLASSIFY_CONCURRENCY);
       await Promise.all(
         batch.map(async (attempt) => {
           try {
-            const classification = await classifyError({
+            const classification = await classifyError(anthropic, {
               question: questionsMap[attempt.question_id],
               studentAnswer: attempt.student_answer,
               timeSpentSeconds: attempt.time_spent_seconds,
               confidenceLevel: attempt.confidence_level,
             });
+            // Unparseable model output: leave the attempt unclassified rather
+            // than persisting a placeholder.
+            if (!classification) return;
             const safeErrorType = VALID_ERROR_TYPES.has(classification.error_type)
               ? classification.error_type
               : null;
@@ -187,26 +191,29 @@ export async function POST(
       skipped_count: typedAttempts.filter((a) => a.student_answer === 'SKIP').length,
     };
 
-    // Generate summary via Claude
-    let summaryText = '';
-    try {
-      const promptTemplate = loadPrompt('session-summary');
-      const systemPrompt = interpolatePrompt(promptTemplate, {
-        session_data: JSON.stringify(summaryContext, null, 2),
-      });
+    // Generate summary via Claude; the plain-stats fallback covers a missing
+    // key as well as a failed call.
+    const fallbackSummary = `You answered ${session.questions_answered} questions with ${Math.round((session.accuracy ?? 0) * 100)}% accuracy. Great effort!`;
+    let summaryText = fallbackSummary;
+    if (anthropic) {
+      try {
+        const promptTemplate = loadPrompt('session-summary');
+        const systemPrompt = interpolatePrompt(promptTemplate, {
+          session_data: JSON.stringify(summaryContext, null, 2),
+        });
 
-      const response = await anthropic.messages.create({
-        model: MODELS.SONNET,
-        max_tokens: 512,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: 'Generate the session summary.' }],
-      });
+        const response = await anthropic.messages.create({
+          model: MODELS.SONNET,
+          max_tokens: 512,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: 'Generate the session summary.' }],
+        });
 
-      summaryText = response.content[0].type === 'text' ? response.content[0].text : '';
-    } catch (summaryErr) {
-      console.error('Summary generation failed:', summaryErr);
-      // Non-fatal: provide a fallback summary
-      summaryText = `You answered ${session.questions_answered} questions with ${Math.round((session.accuracy ?? 0) * 100)}% accuracy. Great effort!`;
+        summaryText = response.content[0].type === 'text' ? response.content[0].text : '';
+      } catch (summaryErr) {
+        console.error('Summary generation failed:', summaryErr);
+        summaryText = fallbackSummary;
+      }
     }
 
     // Update session with ended_at and summary
@@ -234,7 +241,7 @@ export async function POST(
     const { data: existingActivity } = await supabase
       .from('daily_activity')
       .select('*')
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .eq('activity_date', today)
       .single();
 
@@ -250,7 +257,7 @@ export async function POST(
       await supabase
         .from('daily_activity')
         .insert({
-          student_id,
+          student_id: studentId,
           activity_date: today,
           questions_answered: session.questions_answered,
           streak_qualifying: session.questions_answered >= 10,
@@ -262,12 +269,12 @@ export async function POST(
       const { count: totalQuestions } = await supabase
         .from('question_attempts')
         .select('*', { count: 'exact', head: true })
-        .eq('student_id', student_id);
+        .eq('student_id', studentId);
 
       if ((totalQuestions ?? 0) >= 10) {
-        const prediction = await predictScore(student_id);
+        const prediction = await predictScore(anthropic, studentId);
         await supabase.from('score_predictions').insert({
-          student_id,
+          student_id: studentId,
           total_score_low: prediction.totalScoreLow,
           total_score_mid: prediction.totalScoreMid,
           total_score_high: prediction.totalScoreHigh,
@@ -283,7 +290,7 @@ export async function POST(
     // Update micro-goal progress (non-fatal)
     try {
       const { updateGoalProgress } = await import('@/lib/micro-goals');
-      await updateGoalProgress(student_id);
+      await updateGoalProgress(studentId);
     } catch (goalErr) {
       console.error('Goal progress update failed (non-fatal):', goalErr);
     }
@@ -297,7 +304,7 @@ export async function POST(
       const experimentArm = sessionMeta.experiment_arm;
       if (typeof experimentId === 'string' && typeof experimentArm === 'string') {
         const { tallyExperimentDrill } = await import('@/lib/experiment-conclude');
-        await tallyExperimentDrill(supabase, {
+        await tallyExperimentDrill(supabase, anthropic, {
           experimentId,
           arm: experimentArm,
           sessionId,
@@ -314,14 +321,14 @@ export async function POST(
       const { count: totalWrong } = await supabase
         .from('question_attempts')
         .select('*', { count: 'exact', head: true })
-        .eq('student_id', student_id)
+        .eq('student_id', studentId)
         .eq('is_correct', false)
         .neq('student_answer', 'SKIP');
 
       const { data: latestInsight } = await supabase
         .from('wrong_answer_insights')
         .select('total_wrong_answers_analyzed')
-        .eq('student_id', student_id)
+        .eq('student_id', studentId)
         .order('generated_at', { ascending: false })
         .limit(1)
         .maybeSingle();

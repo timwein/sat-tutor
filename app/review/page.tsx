@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { SKILL_TAXONOMY } from '@/lib/types';
 import type { ReviewQueueItem, Question } from '@/lib/types';
 import { StartReviewButton } from '@/components/start-review-button';
@@ -24,6 +25,8 @@ for (const skill of allSkills) {
 }
 
 export default async function ReviewPage() {
+  const student = await requireStudent();
+  const studentId = student.id;
   const supabase = createServerClient();
   const today = new Date().toISOString().split('T')[0];
 
@@ -31,15 +34,6 @@ export default async function ReviewPage() {
   const nextWeek = new Date();
   nextWeek.setDate(nextWeek.getDate() + 7);
   const nextWeekStr = nextWeek.toISOString().split('T')[0];
-
-  // Load the first student (no auth yet)
-  const { data: student } = await supabase
-    .from('students')
-    .select('*')
-    .limit(1)
-    .single();
-
-  const studentId = student?.id ?? '';
 
   // Load review queue items due today or earlier
   const { data: dueItems } = await supabase
@@ -69,7 +63,7 @@ export default async function ReviewPage() {
 
   // Load questions for due items
   const dueQuestionIds = dueList.map((item) => item.question_id);
-  let questionsMap = new Map<string, Question>();
+  const questionsMap = new Map<string, Question>();
 
   if (dueQuestionIds.length > 0) {
     const { data: questions } = await supabase

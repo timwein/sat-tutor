@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
 import type { SkillRating, QuestionAttempt, Question } from '@/lib/types';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const studentId = searchParams.get('student_id');
+    const auth = await requireApiStudent(searchParams.get('student_id'));
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
     const subSkillId = searchParams.get('sub_skill_id');
 
-    if (!studentId || !subSkillId) {
+    if (!subSkillId) {
       return NextResponse.json(
-        { error: 'Missing required query parameters: student_id, sub_skill_id' },
+        { error: 'Missing required query parameter: sub_skill_id' },
         { status: 400 }
       );
     }

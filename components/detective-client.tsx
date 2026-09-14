@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Check, Loader2, SearchCheck, X } from 'lucide-react';
 import { AnswerChoices } from '@/components/answer-choices';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import {
   CLUE_TYPES,
   getClueType,
@@ -22,6 +24,8 @@ interface DetectiveClientProps {
   studentId: string;
   totalWicQuestions: number;
   taggedWicQuestions: number;
+  /** Admins manage the shared question bank; non-admins can't run the classifier. */
+  isAdmin?: boolean;
 }
 
 interface RoundRecord {
@@ -37,6 +41,12 @@ interface RoundRecord {
 
 type Phase = 'primer' | 'loading' | 'decode' | 'answer' | 'feedback' | 'summary';
 
+/** Error from an API response ({ error, code }); key problems render ApiKeyNotice. */
+interface ApiError {
+  code?: string;
+  message: string;
+}
+
 const CHARGE_STYLES: Record<Charge, string> = {
   positive: 'hover:border-green-500 hover:bg-green-50 dark:hover:border-green-500 dark:hover:bg-green-950/40',
   negative: 'hover:border-red-500 hover:bg-red-50 dark:hover:border-red-500 dark:hover:bg-red-950/40',
@@ -47,6 +57,7 @@ export function DetectiveClient({
   studentId,
   totalWicQuestions,
   taggedWicQuestions,
+  isAdmin = false,
 }: DetectiveClientProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('primer');
@@ -67,7 +78,7 @@ export function DetectiveClient({
     explanation: string | null;
   } | null>(null);
   const [rounds, setRounds] = useState<RoundRecord[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
   const questionStartRef = useRef<number>(0);
   const endingRef = useRef(false);
 
@@ -81,7 +92,12 @@ export function DetectiveClient({
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ session_id: sid, student_id: studentId }),
         });
-        if (!res.ok) throw new Error('Failed to load question');
+        if (!res.ok) {
+          const body = await readApiError(res);
+          setError({ code: body.code, message: apiErrorMessage(body, 'Failed to load question') });
+          setPhase('primer');
+          return;
+        }
         const data = await res.json();
         if (!data.question || answeredSoFar >= DRILL_SIZE) {
           setPhase('summary');
@@ -96,8 +112,8 @@ export function DetectiveClient({
         setFeedback(null);
         questionStartRef.current = Date.now();
         setPhase('decode');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load question');
+      } catch {
+        setError({ message: 'Failed to load question' });
         setPhase('primer');
       }
     },
@@ -118,13 +134,21 @@ export function DetectiveClient({
           metadata: { mode: 'detective' },
         }),
       });
-      if (!res.ok) throw new Error('Failed to start the detective drill');
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({
+          code: body.code,
+          message: apiErrorMessage(body, 'Failed to start the detective drill'),
+        });
+        setPhase('primer');
+        return;
+      }
       const { session } = await res.json();
       setSessionId(session.id);
       setRounds([]);
       await fetchNext(session.id, 0);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start');
+    } catch {
+      setError({ message: 'Failed to start' });
       setPhase('primer');
     }
   }
@@ -158,7 +182,11 @@ export function DetectiveClient({
           },
         }),
       });
-      if (!res.ok) throw new Error('Failed to submit answer');
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({ code: body.code, message: apiErrorMessage(body, 'Failed to submit answer') });
+        return;
+      }
       const data = await res.json();
       setFeedback({
         chargeCorrect,
@@ -183,8 +211,8 @@ export function DetectiveClient({
         },
       ]);
       setPhase('feedback');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit answer');
+    } catch {
+      setError({ message: 'Failed to submit answer' });
     }
   }
 
@@ -316,13 +344,18 @@ export function DetectiveClient({
 
         {taggedWicQuestions === 0 && totalWicQuestions > 0 && (
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            No vocab questions are clue-tagged yet, so the decode step won&apos;t be graded.
-            Run the &quot;Context clues &amp; charge&quot; classifier from Parent Dashboard → Question Bank.
+            No vocab questions are clue-tagged yet, so the decode step won&apos;t be graded.{' '}
+            {isAdmin
+              ? 'Run the "Context clues & charge" classifier from Parent Dashboard → Question Bank.'
+              : 'Ask an admin to run the classifier so the decode step can be graded.'}
           </p>
         )}
-        {error && (
-          <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-        )}
+        {error &&
+          (isApiKeyError(error) ? (
+            <ApiKeyNotice code={error.code} message={error.message} />
+          ) : (
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+          ))}
       </div>
     );
   }
@@ -564,9 +597,12 @@ export function DetectiveClient({
         </Card>
       )}
 
-      {error && (
-        <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-      )}
+      {error &&
+        (isApiKeyError(error) ? (
+          <ApiKeyNotice code={error.code} message={error.message} />
+        ) : (
+          <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+        ))}
     </div>
   );
 }

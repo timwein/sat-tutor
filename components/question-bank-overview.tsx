@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Loader2, Check, Pencil, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { readApiError, apiErrorMessage } from '@/lib/api-errors';
 
 interface QuestionRow {
   question_id: string;
@@ -62,7 +63,10 @@ export function QuestionBankOverview() {
     setLoading(true);
     try {
       const res = await fetch('/api/parent/questions');
-      if (!res.ok) throw new Error('Failed to fetch questions');
+      if (!res.ok) {
+        const body = await readApiError(res);
+        throw new Error(apiErrorMessage(body, 'Failed to fetch questions'));
+      }
       const data = await res.json();
       setQuestions(data.questions || []);
     } catch (err) {
@@ -92,7 +96,10 @@ export function QuestionBankOverview() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ questionId: qid, correctAnswer: trimmed }),
       });
-      if (!res.ok) throw new Error('Failed to update');
+      if (!res.ok) {
+        const body = await readApiError(res);
+        throw new Error(apiErrorMessage(body, 'Failed to save answer'));
+      }
 
       setQuestions((prev) =>
         prev.map((q) =>
@@ -100,8 +107,8 @@ export function QuestionBankOverview() {
         )
       );
       setEditingId(null);
-    } catch {
-      setError('Failed to save answer');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save answer');
     } finally {
       setSaving(false);
     }

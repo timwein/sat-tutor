@@ -216,7 +216,7 @@ export async function getParentDashboardData(
       ...new Set(attemptsList.map((a) => a.question_id)),
     ];
 
-    let questionSkillMap = new Map<string, string>();
+    const questionSkillMap = new Map<string, string>();
     if (questionIds.length > 0) {
       const { data: questions } = await supabase
         .from('questions')

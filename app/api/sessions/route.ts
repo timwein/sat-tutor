@@ -1,15 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
 import type { Session } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, session_type, sub_skill_focus } = body;
+    const { session_type, sub_skill_focus } = body;
 
-    if (!student_id || !session_type) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
+    if (!session_type) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, session_type' },
+        { error: 'Missing required field: session_type' },
         { status: 400 }
       );
     }
@@ -29,7 +34,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('sessions')
       .insert({
-        student_id,
+        student_id: studentId,
         session_type,
         started_at: new Date().toISOString(),
         questions_answered: 0,
@@ -65,15 +70,10 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const studentId = searchParams.get('student_id');
+    const auth = await requireApiStudent(searchParams.get('student_id'));
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
     const limit = parseInt(searchParams.get('limit') || '10', 10);
-
-    if (!studentId) {
-      return NextResponse.json(
-        { error: 'Missing required query parameter: student_id' },
-        { status: 400 }
-      );
-    }
 
     const supabase = createServerClient();
 

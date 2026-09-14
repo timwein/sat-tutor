@@ -1,18 +1,13 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent } from '@/lib/auth';
 import { WordBankClient } from '@/components/word-bank-client';
 
 export default async function WordBankPage() {
+  const student = await requireStudent();
+  const studentId = student.id;
   const supabase = createServerClient();
-
-  const { data: student } = await supabase
-    .from('students')
-    .select('id')
-    .limit(1)
-    .single();
-
-  const studentId = student?.id ?? '';
 
   const { data: words } = await supabase
     .from('word_bank')

@@ -1,15 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Client-side Supabase client (uses anon key, respects RLS)
-export function createBrowserClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
-// Server-side Supabase client (uses service role key, bypasses RLS)
-// ONLY use in API routes and Server Actions
+// Server-side Supabase client (uses service role key, bypasses RLS).
+// ONLY use in API routes, Server Components and Server Actions - never in
+// client components. Identity comes from lib/auth.ts, not from this client.
 export function createServerClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,3 +15,6 @@ export function createServerClient() {
     }
   );
 }
+
+// For the cookie-based auth clients see lib/supabase-auth.ts (server) and
+// lib/supabase-browser.ts (client components).

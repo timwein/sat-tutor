@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import Anthropic from '@anthropic-ai/sdk';
-import { verifyAccessToken } from '@/lib/parent-auth';
+import type Anthropic from '@anthropic-ai/sdk';
+import { requireApiAdmin } from '@/lib/auth';
+import { getAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
+import { requireParentAccess } from '@/lib/parent-auth';
 import { createServerClient } from '@/lib/supabase';
 import { MODELS } from '@/lib/claude';
 import { GRAMMAR_RULES, GRAMMAR_TAG_PREFIX } from '@/lib/grammar-rules';
@@ -13,8 +14,6 @@ import {
   CHARGES,
 } from '@/lib/context-clues';
 import type { Question } from '@/lib/types';
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 const BATCH_SIZE = 15;
 const CONCURRENCY = 3;
@@ -30,6 +29,7 @@ interface ClassifyConfig {
 // that solves it, and the charge (connotation) of the correct answer in
 // context. Handled separately from the single-tag kinds below.
 async function classifyDetectiveBatch(
+  anthropic: Anthropic,
   batch: Question[]
 ): Promise<Map<string, { clue: string; charge: string }>> {
   const items = batch.map((q) => ({
@@ -100,6 +100,7 @@ function buildConfig(kind: 'grammar' | 'logic'): ClassifyConfig {
 }
 
 async function classifyBatch(
+  anthropic: Anthropic,
   batch: Question[],
   config: ClassifyConfig
 ): Promise<Map<string, string>> {
@@ -142,18 +143,20 @@ async function classifyBatch(
 
 /**
  * Tag questions with grammar-rule or logic-relationship categories.
- * Parent-gated. Idempotent: only untagged questions are processed, so
- * re-running as the bank grows is safe.
+ * Admin-only and parent-PIN-gated; runs on the admin's own Anthropic key.
+ * Idempotent: only untagged questions are processed, so re-running as the
+ * bank grows is safe.
  *
  * Body: { kind: 'grammar' | 'logic', preview?: boolean }
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('parent_access_token')?.value;
-    if (!token || !verifyAccessToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireApiAdmin();
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
+    const parentDenied = await requireParentAccess(student.id);
+    if (parentDenied) return parentDenied;
 
     const body = await request.json();
     const kind = body.kind as 'grammar' | 'logic' | 'detective';
@@ -187,6 +190,7 @@ export async function POST(request: NextRequest) {
       if (untaggedWic.length === 0) {
         return NextResponse.json({ classified: 0, total: allWic.length, message: 'Nothing to classify' });
       }
+      const anthropic = getAnthropicClient(student);
       const wicBatches: Question[][] = [];
       for (let i = 0; i < untaggedWic.length; i += BATCH_SIZE) {
         wicBatches.push(untaggedWic.slice(i, i + BATCH_SIZE));
@@ -194,7 +198,7 @@ export async function POST(request: NextRequest) {
       const detAssignments = new Map<string, { clue: string; charge: string }>();
       for (let i = 0; i < wicBatches.length; i += CONCURRENCY) {
         const chunk = wicBatches.slice(i, i + CONCURRENCY);
-        const results = await Promise.all(chunk.map((b) => classifyDetectiveBatch(b)));
+        const results = await Promise.all(chunk.map((b) => classifyDetectiveBatch(anthropic, b)));
         for (const r of results) for (const [k, v] of r) detAssignments.set(k, v);
       }
       let updatedCount = 0;
@@ -250,6 +254,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ classified: 0, total: all.length, message: 'Nothing to classify' });
     }
 
+    const anthropic = getAnthropicClient(student);
     const batches: Question[][] = [];
     for (let i = 0; i < untagged.length; i += BATCH_SIZE) {
       batches.push(untagged.slice(i, i + BATCH_SIZE));
@@ -258,7 +263,7 @@ export async function POST(request: NextRequest) {
     const assignments = new Map<string, string>();
     for (let i = 0; i < batches.length; i += CONCURRENCY) {
       const chunk = batches.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(chunk.map((b) => classifyBatch(b, config)));
+      const results = await Promise.all(chunk.map((b) => classifyBatch(anthropic, b, config)));
       for (const r of results) for (const [k, v] of r) assignments.set(k, v);
     }
 
@@ -280,6 +285,9 @@ export async function POST(request: NextRequest) {
       total: all.length,
     });
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
+
     console.error('Tag classification error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }

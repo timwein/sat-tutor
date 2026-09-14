@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { InsightCard } from '@/components/insight-card';
 import { DimensionDetail } from '@/components/dimension-detail';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import type { WrongAnswerInsight } from '@/lib/types';
 
 import type { EvidenceMap } from '@/components/evidence-list';
@@ -17,6 +19,11 @@ interface InsightsDashboardProps {
   wrongAnswerCount: number;
   studentId: string;
   evidenceMap?: EvidenceMap;
+}
+
+interface RequestError {
+  code?: string;
+  message: string;
 }
 
 const DIMENSION_MAP: Record<string, string> = {
@@ -54,6 +61,7 @@ export function InsightsDashboard({
 }: InsightsDashboardProps) {
   const router = useRouter();
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [error, setError] = useState<RequestError | null>(null);
   const [currentInsight, setCurrentInsight] =
     useState<WrongAnswerInsight>(insight);
   const [selectedDimension] = useState<string>(
@@ -65,6 +73,7 @@ export function InsightsDashboard({
 
   async function handleRefresh() {
     setIsRegenerating(true);
+    setError(null);
     try {
       const response = await fetch('/api/insights', {
         method: 'POST',
@@ -75,9 +84,15 @@ export function InsightsDashboard({
         const data = await response.json();
         setCurrentInsight(data);
         router.refresh();
+      } else {
+        const body = await readApiError(response);
+        setError({
+          code: body.code,
+          message: apiErrorMessage(body, 'Failed to refresh analysis'),
+        });
       }
     } catch {
-      // Silently handle error — user can retry
+      setError({ message: 'Failed to refresh analysis' });
     } finally {
       setIsRegenerating(false);
     }
@@ -108,6 +123,13 @@ export function InsightsDashboard({
           {isRegenerating ? 'Analyzing...' : 'Refresh Analysis'}
         </Button>
       </div>
+
+      {error &&
+        (isApiKeyError(error) ? (
+          <ApiKeyNotice code={error.code} message={error.message} />
+        ) : (
+          <p className="text-sm text-red-600 dark:text-red-400">{error.message}</p>
+        ))}
 
       {!canRefresh && (
         <p className="text-xs text-gray-400 dark:text-gray-500">

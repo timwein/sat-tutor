@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, FlaskConical, Loader2, Trophy } from 'lucide-react';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import {
   DRILLS_PER_ARM,
   EXPERIMENT_ARMS,
@@ -31,10 +33,16 @@ interface ExperimentPanelProps {
   experiment: ExperimentRow | null;
 }
 
+/** Error from an API response ({ error, code }); key problems render ApiKeyNotice. */
+interface ApiError {
+  code?: string;
+  message: string;
+}
+
 export function ExperimentPanel({ studentId, experiment }: ExperimentPanelProps) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
   async function enroll() {
     setBusy(true);
@@ -45,10 +53,17 @@ export function ExperimentPanel({ studentId, experiment }: ExperimentPanelProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: studentId, action: 'enroll' }),
       });
-      if (!res.ok) throw new Error('Failed to start the experiment');
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({
+          code: body.code,
+          message: apiErrorMessage(body, 'Failed to start the experiment'),
+        });
+        return;
+      }
       router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start');
+    } catch {
+      setError({ message: 'Failed to start' });
     } finally {
       setBusy(false);
     }
@@ -63,11 +78,16 @@ export function ExperimentPanel({ studentId, experiment }: ExperimentPanelProps)
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: studentId, action: 'start_drill' }),
       });
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({ code: body.code, message: apiErrorMessage(body, 'Failed to start drill') });
+        setBusy(false);
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed to start drill');
       router.push(`/study/${data.session_id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start drill');
+    } catch {
+      setError({ message: 'Failed to start drill' });
       setBusy(false);
     }
   }
@@ -147,9 +167,12 @@ export function ExperimentPanel({ studentId, experiment }: ExperimentPanelProps)
               <>Start Next Drill <ArrowRight className="ml-1 h-4 w-4" /></>
             )}
           </Button>
-          {error && (
-            <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-          )}
+          {error &&
+            (isApiKeyError(error) ? (
+              <ApiKeyNotice code={error.code} message={error.message} />
+            ) : (
+              <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+            ))}
         </CardContent>
       </Card>
     );
@@ -176,9 +199,12 @@ export function ExperimentPanel({ studentId, experiment }: ExperimentPanelProps)
             'Start the Experiment'
           )}
         </Button>
-        {error && (
-          <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-        )}
+        {error &&
+          (isApiKeyError(error) ? (
+            <ApiKeyNotice code={error.code} message={error.message} />
+          ) : (
+            <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+          ))}
       </CardContent>
     </Card>
   );
