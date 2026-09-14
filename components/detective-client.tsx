@@ -24,6 +24,8 @@ interface DetectiveClientProps {
   studentId: string;
   totalWicQuestions: number;
   taggedWicQuestions: number;
+  /** Admins manage the shared question bank; non-admins can't run the classifier. */
+  isAdmin?: boolean;
 }
 
 interface RoundRecord {
@@ -55,6 +57,7 @@ export function DetectiveClient({
   studentId,
   totalWicQuestions,
   taggedWicQuestions,
+  isAdmin = false,
 }: DetectiveClientProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('primer');
@@ -341,8 +344,10 @@ export function DetectiveClient({
 
         {taggedWicQuestions === 0 && totalWicQuestions > 0 && (
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            No vocab questions are clue-tagged yet, so the decode step won&apos;t be graded.
-            Run the &quot;Context clues &amp; charge&quot; classifier from Parent Dashboard → Question Bank.
+            No vocab questions are clue-tagged yet, so the decode step won&apos;t be graded.{' '}
+            {isAdmin
+              ? 'Run the "Context clues & charge" classifier from Parent Dashboard → Question Bank.'
+              : 'Ask an admin to run the classifier so the decode step can be graded.'}
           </p>
         )}
         {error &&

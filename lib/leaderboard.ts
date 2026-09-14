@@ -26,13 +26,17 @@ export function leaderboardDisplayName(name: string): string {
 /**
  * Every student who has not opted out (settings.hide_from_leaderboard),
  * ranked by current streak, then questions this week, then longest streak.
+ * Remaining ties keep sign-up order (earliest member first) so the ranking
+ * is stable between loads.
  */
 export async function getLeaderboard(): Promise<LeaderboardRow[]> {
   const supabase = createServerClient();
 
+  // Ordered so the stable sort below breaks ties deterministically.
   const { data } = await supabase
     .from('students')
-    .select('id, name, settings');
+    .select('id, name, settings')
+    .order('created_at', { ascending: true });
 
   const students = ((data ?? []) as LeaderboardStudent[]).filter(
     (s) => s.settings?.hide_from_leaderboard !== true

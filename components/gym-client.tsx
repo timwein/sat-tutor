@@ -18,6 +18,8 @@ interface GymClientProps {
   studentId: string;
   totalTransitionQuestions: number;
   taggedTransitionQuestions: number;
+  /** Admins manage the shared question bank; non-admins can't run the classifier. */
+  isAdmin?: boolean;
 }
 
 interface RoundRecord {
@@ -40,6 +42,7 @@ export function GymClient({
   studentId,
   totalTransitionQuestions,
   taggedTransitionQuestions,
+  isAdmin = false,
 }: GymClientProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>('primer');
@@ -264,7 +267,10 @@ export function GymClient({
         {taggedTransitionQuestions === 0 && totalTransitionQuestions > 0 && (
           <p className="text-xs text-gray-400 dark:text-gray-500">
             No transitions questions are relationship-tagged yet, so step 1 won&apos;t be
-            graded. Run the classifier from the Parent Dashboard → Questions to enable it.
+            graded.{' '}
+            {isAdmin
+              ? 'Run the classifier from the Parent Dashboard → Question Bank to enable it.'
+              : 'Ask an admin to run the classifier so this step can be graded.'}
           </p>
         )}
         <p className="text-sm text-gray-500 dark:text-gray-400">

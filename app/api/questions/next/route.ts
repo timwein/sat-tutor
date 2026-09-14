@@ -228,7 +228,9 @@ export async function POST(request: NextRequest) {
       const { data: tagQuestions, error: tagError } = await supabase
         .from('questions')
         .select('*')
-        .contains('tags', [drillTag]);
+        .contains('tags', [drillTag])
+        // Shared bank plus this student's own private drills
+        .or(`created_by_student_id.is.null,created_by_student_id.eq.${studentId}`);
       if (tagError) {
         console.error('Failed to load tagged questions:', tagError);
         return NextResponse.json({ error: 'Failed to load questions' }, { status: 500 });
@@ -300,7 +302,9 @@ export async function POST(request: NextRequest) {
 
     let lightQuery = supabase
       .from('questions')
-      .select('id, question_id, sub_skill_id, difficulty, section');
+      .select('id, question_id, sub_skill_id, difficulty, section')
+      // Shared bank plus this student's own private drills
+      .or(`created_by_student_id.is.null,created_by_student_id.eq.${studentId}`);
     if (subSkillFocus) {
       lightQuery = lightQuery.eq('sub_skill_id', subSkillFocus);
     } else if (skillPool && skillPool.length > 0) {

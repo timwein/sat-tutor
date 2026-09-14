@@ -34,14 +34,12 @@ export default async function SettingsPage() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            The parent dashboard is protected by a PIN. To change it, unlock the{' '}
+            The parent dashboard is protected by a PIN, created the first time the{' '}
             <Link href="/parent" className="text-blue-600 hover:underline">
               parent dashboard
             </Link>{' '}
-            with the current PIN first, then use the change-PIN option there. If the
-            PIN is lost, it can be reset from the database (the{' '}
-            <code className="rounded bg-gray-100 dark:bg-gray-800 px-1 text-xs">parent_access</code>{' '}
-            row).
+            is opened. If the PIN is lost, ask an admin to reset it; you will then be
+            prompted to create a new one.
           </p>
         </CardContent>
       </Card>

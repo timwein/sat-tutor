@@ -172,6 +172,8 @@ export async function POST(request: NextRequest) {
         explanation: q.explanation,
         is_ai_generated: true,
         tags: [`vocab:${wordRow.normalized_word}`, ...detectiveTags],
+        // Private to this student: built from their banked words with their key
+        created_by_student_id: studentId,
       };
     });
 

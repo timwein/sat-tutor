@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
-import { requireStudent } from '@/lib/auth';
+import { requireStudent, isAdmin } from '@/lib/auth';
 import { GymClient } from '@/components/gym-client';
 
 export default async function GymPage() {
@@ -22,6 +22,7 @@ export default async function GymPage() {
 
   return (
     <GymClient
+      isAdmin={isAdmin(student)}
       studentId={studentId}
       totalTransitionQuestions={rows.length}
       taggedTransitionQuestions={taggedCount}

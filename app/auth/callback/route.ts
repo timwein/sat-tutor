@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const rawNext = searchParams.get('next') ?? '/';
   // Only allow same-origin relative paths.
-  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/';
+  const next = /^\/(?![\/\\])/.test(rawNext) ? rawNext : '/';
 
   if (code) {
     const supabase = await createAuthClient();

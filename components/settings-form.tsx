@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +19,7 @@ export function SettingsForm({
   initialRwFocus,
   initialHideFromLeaderboard,
 }: SettingsFormProps) {
+  const router = useRouter();
   const [name, setName] = useState(initialName);
   const [rwFocus, setRwFocus] = useState(initialRwFocus);
   const [hideFromLeaderboard, setHideFromLeaderboard] = useState(initialHideFromLeaderboard);
@@ -45,6 +47,8 @@ export function SettingsForm({
         setError(data.error ?? 'Failed to save. Please try again.');
       } else {
         setMessage('Saved.');
+        // Re-run the root layout so the nav shows the new name.
+        router.refresh();
       }
     } catch {
       setError('Network error. Please try again.');
@@ -105,7 +109,7 @@ export function SettingsForm({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Friends</CardTitle>
+          <CardTitle className="text-base">Leaderboard</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <label className="flex cursor-pointer items-start gap-3">
@@ -117,11 +121,11 @@ export function SettingsForm({
             />
             <span>
               <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                Show me on the friends leaderboard
+                Show me on the leaderboard
               </span>
               <span className="block text-xs text-gray-500 dark:text-gray-400">
-                Uncheck to keep your name and streak off the leaderboard. Your own
-                progress is unaffected.
+                Uncheck to keep your name and streak off the leaderboard, which is visible
+                to everyone on this deployment. Your own progress is unaffected.
               </span>
             </span>
           </label>

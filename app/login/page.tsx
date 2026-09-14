@@ -14,7 +14,10 @@ export default async function LoginPage({
   if (user) redirect('/');
 
   const params = await searchParams;
-  const next = params.next && params.next.startsWith('/') ? params.next : '/';
+  const rawNext = params.next ?? '/';
+  // Only allow same-origin relative paths: must start with a single "/" and not
+  // "//" or "/\" (browsers resolve both to a foreign origin).
+  const next = /^\/(?![\/\\])/.test(rawNext) ? rawNext : '/';
   const initialMode = params.mode === 'signup' ? 'signup' : 'signin';
   const inviteRequired = !!process.env.SIGNUP_INVITE_CODE;
 

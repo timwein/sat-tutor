@@ -103,10 +103,13 @@ export async function POST(
 
     // ----- Batched error classification -----
     // Wrong answers are classified here (not per-attempt during the session)
-    // so submits stay fast; run with limited concurrency, non-fatal.
-    const toClassify = typedAttempts.filter(
-      (a) => !a.is_correct && a.student_answer !== 'SKIP' && !a.error_type && questionsMap[a.question_id]
-    );
+    // so submits stay fast; run with limited concurrency, non-fatal. Without
+    // a key nothing is classified and the attempts are left untouched.
+    const toClassify = anthropic
+      ? typedAttempts.filter(
+          (a) => !a.is_correct && a.student_answer !== 'SKIP' && !a.error_type && questionsMap[a.question_id]
+        )
+      : [];
     const CLASSIFY_CONCURRENCY = 3;
     for (let i = 0; i < toClassify.length; i += CLASSIFY_CONCURRENCY) {
       const batch = toClassify.slice(i, i + CLASSIFY_CONCURRENCY);
@@ -119,6 +122,9 @@ export async function POST(
               timeSpentSeconds: attempt.time_spent_seconds,
               confidenceLevel: attempt.confidence_level,
             });
+            // Unparseable model output: leave the attempt unclassified rather
+            // than persisting a placeholder.
+            if (!classification) return;
             const safeErrorType = VALID_ERROR_TYPES.has(classification.error_type)
               ? classification.error_type
               : null;

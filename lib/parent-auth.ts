@@ -139,12 +139,19 @@ export function verifyAccessToken(
  * Parent routes run inside the student's signed-in session and additionally
  * require the parent PIN cookie issued for that same student. Returns null
  * when access is allowed, otherwise the 401 response to send back.
+ *
+ * Uses code 'parent_pin_required' (not 'unauthorized') so the parent UI can
+ * tell "re-enter the PIN" apart from "the sign-in session is gone", which the
+ * proxy and lib/auth.ts report with code 'unauthorized'.
  */
 export async function requireParentAccess(studentId: string): Promise<NextResponse | null> {
   const token = (await cookies()).get('parent_access_token')?.value;
   const parentAuth = token ? verifyAccessToken(token) : null;
   if (!parentAuth || parentAuth.studentId !== studentId) {
-    return NextResponse.json({ error: 'Unauthorized', code: 'unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Parent PIN required', code: 'parent_pin_required' },
+      { status: 401 }
+    );
   }
   return null;
 }

@@ -55,6 +55,8 @@ export interface Question {
   explanation: string | null;
   is_ai_generated: boolean;
   tags: string[];
+  /** Null for the shared bank; set for drills private to one student. */
+  created_by_student_id?: string | null;
   created_at: string;
 }
 

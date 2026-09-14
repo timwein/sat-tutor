@@ -52,16 +52,47 @@ export function AuthForm({ next, initialMode, inviteRequired }: AuthFormProps) {
   }
 
   async function signUp() {
-    const res = await fetch('/api/auth/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email: email.trim(), password, invite_code: inviteCode }),
-    });
-    if (!res.ok) {
-      setError(apiErrorMessage(await readApiError(res), 'Could not create the account.'));
+    if (inviteRequired) {
+      // The invite code is the trust boundary: the server creates a confirmed
+      // account and we sign straight in.
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email: email.trim(), password, invite_code: inviteCode }),
+      });
+      if (!res.ok) {
+        setError(apiErrorMessage(await readApiError(res), 'Could not create the account.'));
+        return;
+      }
+      await signIn();
       return;
     }
-    await signIn();
+
+    // Open sign-up: Supabase owns it and (when "Confirm email" is on) sends
+    // the confirmation link, which lands on /auth/callback.
+    const supabase = createBrowserAuthClient();
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+      options: {
+        data: { name: name.trim() },
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      },
+    });
+    if (signUpError) {
+      setError(
+        /already registered|already exists/i.test(signUpError.message)
+          ? 'An account with that email already exists. Sign in instead.'
+          : signUpError.message
+      );
+      return;
+    }
+    if (data.session) {
+      router.replace(next);
+      router.refresh();
+      return;
+    }
+    setNotice('Check your email for a confirmation link, then come back and sign in.');
   }
 
   async function sendReset() {

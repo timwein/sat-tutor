@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { classifyError } from '@/lib/claude';
 import { requireApiStudent } from '@/lib/auth';
-import { getOptionalAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
+import { getAnthropicClient, anthropicErrorResponse } from '@/lib/anthropic-client';
 import type { Question } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
@@ -22,9 +22,9 @@ export async function POST(request: NextRequest) {
 
     const typedQuestion = question as Question;
 
-    // Classification is optional enrichment: without a key it returns the
-    // unclassified placeholder instead of failing.
-    const anthropic = getOptionalAnthropicClient(student);
+    // A direct classification request needs the student's own key; the
+    // batched, optional path lives in the session-end and submit-module routes.
+    const anthropic = getAnthropicClient(student);
 
     const classification = await classifyError(anthropic, {
       question: typedQuestion,
@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
       timeSpentSeconds: time_spent_seconds ?? null,
       confidenceLevel: confidence_level ?? null,
     });
+
+    if (!classification) {
+      return NextResponse.json(
+        { error: 'Could not classify this answer. Please try again.', code: 'anthropic_error' },
+        { status: 502 }
+      );
+    }
 
     return NextResponse.json(classification);
   } catch (error) {

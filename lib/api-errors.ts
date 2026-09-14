@@ -11,7 +11,8 @@ export type ApiErrorCode =
   | 'rate_limited'
   | 'anthropic_error'
   | 'unauthorized'
-  | 'forbidden';
+  | 'forbidden'
+  | 'parent_pin_required';
 
 export interface ApiErrorBody {
   error?: string;

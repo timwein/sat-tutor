@@ -71,16 +71,18 @@ async function provisionStudent(user: User): Promise<Student> {
   if (linked) return linked as Student;
 
   if (email) {
+    // ILIKE treats % and _ as wildcards (PostgREST also maps * to %); escape, then re-check equality.
+    const pattern = email.replace(/[\\%_]/g, (c) => `\\${c}`);
     const { data: legacy } = await supabase
       .from('students')
       .select('*')
-      .ilike('email', email)
+      .ilike('email', pattern)
       .is('auth_user_id', null)
       .maybeSingle();
-    if (legacy) {
+    if (legacy && typeof legacy.email === 'string' && legacy.email.toLowerCase() === email) {
       const { data: claimed } = await supabase
         .from('students')
-        .update({ auth_user_id: user.id, last_seen_at: new Date().toISOString() })
+        .update({ auth_user_id: user.id, email, last_seen_at: new Date().toISOString() })
         .eq('id', legacy.id)
         .is('auth_user_id', null)
         .select('*')
@@ -109,6 +111,10 @@ async function provisionStudent(user: User): Promise<Student> {
       .eq('auth_user_id', user.id)
       .maybeSingle();
     if (retry) return retry as Student;
+    if (error?.code === '23505') {
+      // students.email is UNIQUE: another row (already linked to a different auth user) holds this address.
+      throw new Error(`Failed to provision student: email ${email} is already used by another students row`);
+    }
     throw new Error(`Failed to provision student: ${error?.message ?? 'unknown error'}`);
   }
   return inserted as Student;

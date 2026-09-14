@@ -75,6 +75,8 @@ export async function POST(request: NextRequest) {
       .from('questions')
       .select('*')
       .eq('section', section)
+      // Shared bank plus this student's own private drills
+      .or(`created_by_student_id.is.null,created_by_student_id.eq.${student.id}`)
       .order('difficulty', { ascending: true });
 
     if (questionsError || !allQuestions) {

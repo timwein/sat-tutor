@@ -165,22 +165,18 @@ export interface ErrorClassification {
   what_student_likely_thought: string;
 }
 
-const UNCLASSIFIED: ErrorClassification = {
-  error_type: 'unknown',
-  explanation: 'Could not classify this error automatically.',
-  distractor_type: 'other',
-  what_student_likely_thought: 'Unknown reasoning pattern.',
-};
-
 /**
  * Classify a wrong answer. Pass `null` for the client when the student has
  * no API key: the attempt is still recorded, just without a classification.
+ * Returns `null` (never a placeholder) when there is no client or the model
+ * output cannot be parsed, so callers leave the attempt unclassified rather
+ * than persisting or displaying a fake classification.
  */
 export async function classifyError(
   anthropic: Anthropic | null,
   params: ClassifyErrorParams
-): Promise<ErrorClassification> {
-  if (!anthropic) return UNCLASSIFIED;
+): Promise<ErrorClassification | null> {
+  if (!anthropic) return null;
   const { question, studentAnswer, timeSpentSeconds, confidenceLevel } = params;
 
   const promptTemplate = loadPrompt('error-classifier');
@@ -206,7 +202,7 @@ export async function classifyError(
   try {
     return JSON.parse(jsonString);
   } catch {
-    return UNCLASSIFIED;
+    return null;
   }
 }
 

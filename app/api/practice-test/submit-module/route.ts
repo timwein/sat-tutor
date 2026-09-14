@@ -17,6 +17,13 @@ import type {
   ModuleResult,
 } from '@/lib/types';
 
+// Mirrors the CHECK constraint on question_attempts.error_type; anything
+// else (including the 'unknown' placeholder) is stored as null.
+const VALID_ERROR_TYPES = new Set([
+  'conceptual_gap', 'procedural_error', 'careless_rush',
+  'misread_comprehension', 'trap_answer', 'time_pressure', 'knowledge_gap',
+]);
+
 function lookupSubSkillName(subSkillId: string): string {
   const allSkills = [
     ...SKILL_TAXONOMY.reading_writing,
@@ -40,6 +47,7 @@ async function classifyErrorsThrottled(
   items: Array<{ question: Question; studentAnswer: string; timeSpent: number; confidence: string | null }>
 ): Promise<Map<string, ErrorClassification>> {
   const results = new Map<string, ErrorClassification>();
+  if (!anthropic) return results; // no key: record attempts unclassified
   const concurrency = 3;
 
   for (let i = 0; i < items.length; i += concurrency) {
@@ -52,7 +60,7 @@ async function classifyErrorsThrottled(
           timeSpentSeconds: item.timeSpent,
           confidenceLevel: item.confidence,
         });
-        results.set(item.question.question_id, classification);
+        if (classification) results.set(item.question.question_id, classification);
       } catch (err) {
         console.error(`Error classifying ${item.question.question_id}:`, err);
       }
@@ -270,7 +278,9 @@ export async function POST(request: NextRequest) {
         is_correct: result?.isCorrect ?? false,
         time_spent_seconds: answer.time_spent_seconds,
         confidence_level: answer.confidence_level,
-        error_type: classification?.error_type ?? null,
+        error_type: classification && VALID_ERROR_TYPES.has(classification.error_type)
+          ? classification.error_type
+          : null,
         distractor_type: classification?.distractor_type ?? null,
         error_explanation: classification?.explanation ?? null,
         attempted_at: new Date().toISOString(),

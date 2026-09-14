@@ -21,12 +21,26 @@ export async function tallyExperimentDrill(
   params: { experimentId: string; arm: string; sessionId: string }
 ): Promise<void> {
   const { experimentId, arm, sessionId } = params;
+  // Only known protocol tags may be tallied; anything else came from
+  // client-supplied session metadata, not from start_drill.
+  if (!getArm(arm)) return;
+
+  // The session's student_id is server-owned; scope the experiment to it so
+  // a client-chosen experiment_id can never tally into another student's row.
+  const { data: session } = await supabase
+    .from('sessions')
+    .select('student_id')
+    .eq('id', sessionId)
+    .maybeSingle();
+  const studentId = session?.student_id;
+  if (typeof studentId !== 'string') return;
 
   const { data: experiment } = await supabase
     .from('strategy_experiments')
     .select('*')
     .eq('id', experimentId)
-    .single();
+    .eq('student_id', studentId)
+    .maybeSingle();
   if (!experiment || experiment.status !== 'running') return;
 
   const { data: attempts } = await supabase
@@ -109,5 +123,6 @@ export async function tallyExperimentDrill(
           }
         : {}),
     })
-    .eq('id', experimentId);
+    .eq('id', experimentId)
+    .eq('student_id', studentId);
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { KeyRound } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,11 +34,14 @@ function formatDate(iso: string): string {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+    // Pin the zone so the SSR'd label matches what the browser renders.
+    timeZone: 'UTC',
   });
 }
 
 /** Settings card for the student's own Anthropic API key (add, replace, remove). */
 export function ApiKeyCard({ initialLast4, initialAddedAt }: ApiKeyCardProps) {
+  const router = useRouter();
   const [last4, setLast4] = useState<string | null>(initialLast4);
   const [addedAt, setAddedAt] = useState<string | null>(initialAddedAt);
   const [apiKey, setApiKey] = useState('');
@@ -76,6 +80,8 @@ export function ApiKeyCard({ initialLast4, initialAddedAt }: ApiKeyCardProps) {
       setAddedAt(data.added_at ?? new Date().toISOString());
       setApiKey('');
       setMessage('Key saved. AI features are ready to go.');
+      // Re-run the root layout so the nav's "Add API key" hint updates.
+      router.refresh();
     } catch {
       setError({ message: 'Network error. Please try again.' });
     } finally {
@@ -100,6 +106,7 @@ export function ApiKeyCard({ initialLast4, initialAddedAt }: ApiKeyCardProps) {
       setLast4(null);
       setAddedAt(null);
       setMessage('Key removed.');
+      router.refresh();
     } catch {
       setError({ message: 'Network error. Please try again.' });
     } finally {

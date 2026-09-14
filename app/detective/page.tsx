@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
-import { requireStudent } from '@/lib/auth';
+import { requireStudent, isAdmin } from '@/lib/auth';
 import { DetectiveClient } from '@/components/detective-client';
 
 export default async function DetectivePage() {
@@ -21,6 +21,7 @@ export default async function DetectivePage() {
 
   return (
     <DetectiveClient
+      isAdmin={isAdmin(student)}
       studentId={studentId}
       totalWicQuestions={rows.length}
       taggedWicQuestions={taggedCount}

@@ -65,7 +65,10 @@ export async function proxy(request: NextRequest) {
     }
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = '/login';
-    loginUrl.search = pathname && pathname !== '/' ? `?next=${encodeURIComponent(pathname)}` : '';
+    loginUrl.search =
+      pathname && pathname !== '/'
+        ? `?next=${encodeURIComponent(pathname + request.nextUrl.search)}`
+        : '';
     const redirect = NextResponse.redirect(loginUrl);
     response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
     return redirect;

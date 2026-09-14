@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase';
 import { requireApiStudent } from '@/lib/auth';
-import { hashPin, generateAccessToken } from '@/lib/parent-auth';
+import {
+  hashPin,
+  generateAccessToken,
+  requireParentAccess,
+} from '@/lib/parent-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,6 +43,12 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (existing) {
+      // Changing an existing PIN requires having unlocked with the current
+      // one; otherwise any signed-in student could overwrite it and mint the
+      // parent cookie. First-time setup (no row yet) needs no prior unlock.
+      const parentDenied = await requireParentAccess(studentId);
+      if (parentDenied) return parentDenied;
+
       // Update existing row
       const { error } = await supabase
         .from('parent_access')

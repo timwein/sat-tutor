@@ -55,9 +55,15 @@ export function ParentDashboardShell({
         const data: ParentDashboardData = await res.json();
         setDashboardData(data);
       } else if (res.status === 401) {
-        // Parent PIN token missing or expired - ask for it again
-        setAuthState('needs-auth');
-        setPinDialogOpen(true);
+        const body = await readApiError(res);
+        if (body.code === 'parent_pin_required') {
+          // Parent PIN token missing or expired - ask for it again
+          setAuthState('needs-auth');
+          setPinDialogOpen(true);
+        } else {
+          // The sign-in session itself is gone
+          window.location.assign('/login?next=%2Fparent');
+        }
       } else {
         const body = await readApiError(res);
         setDataError(

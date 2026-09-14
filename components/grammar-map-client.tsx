@@ -19,6 +19,8 @@ interface GrammarMapClientProps {
   studentId: string;
   statsByTag: Record<string, RuleStats>;
   untaggedCount: number;
+  /** Admins manage the shared question bank; non-admins can't run the classifier. */
+  isAdmin?: boolean;
 }
 
 /** Error from an API response ({ error, code }); key problems render ApiKeyNotice. */
@@ -39,7 +41,12 @@ function cellTone(stats: RuleStats): string {
   return 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30';
 }
 
-export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: GrammarMapClientProps) {
+export function GrammarMapClient({
+  studentId,
+  statsByTag,
+  untaggedCount,
+  isAdmin = false,
+}: GrammarMapClientProps) {
   const router = useRouter();
   const [openRule, setOpenRule] = useState<GrammarRule | null>(null);
   const [starting, setStarting] = useState(false);
@@ -140,7 +147,10 @@ export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: Gramm
       {untaggedCount > 0 && (
         <p className="text-xs text-gray-400 dark:text-gray-500">
           {untaggedCount} conventions question{untaggedCount === 1 ? '' : 's'} not yet
-          classified by rule - run the classifier from the Parent Dashboard to include them.
+          classified by rule.{' '}
+          {isAdmin
+            ? 'Run the classifier from the Parent Dashboard → Question Bank to include them.'
+            : 'Ask an admin to run the classifier to include them.'}
         </p>
       )}
       {groups.map((group) => (
