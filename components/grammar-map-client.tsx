@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, ArrowRight, Loader2, Target } from 'lucide-react';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import { GRAMMAR_RULES, type GrammarRule } from '@/lib/grammar-rules';
 
 export interface RuleStats {
@@ -17,6 +19,14 @@ interface GrammarMapClientProps {
   studentId: string;
   statsByTag: Record<string, RuleStats>;
   untaggedCount: number;
+  /** Admins manage the shared question bank; non-admins can't run the classifier. */
+  isAdmin?: boolean;
+}
+
+/** Error from an API response ({ error, code }); key problems render ApiKeyNotice. */
+interface ApiError {
+  code?: string;
+  message: string;
 }
 
 const MIN_ATTEMPTS_FOR_SIGNAL = 3;
@@ -31,11 +41,16 @@ function cellTone(stats: RuleStats): string {
   return 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/30';
 }
 
-export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: GrammarMapClientProps) {
+export function GrammarMapClient({
+  studentId,
+  statsByTag,
+  untaggedCount,
+  isAdmin = false,
+}: GrammarMapClientProps) {
   const router = useRouter();
   const [openRule, setOpenRule] = useState<GrammarRule | null>(null);
   const [starting, setStarting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ApiError | null>(null);
 
   async function startDrill(rule: GrammarRule) {
     setStarting(true);
@@ -46,11 +61,16 @@ export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: Gramm
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_id: studentId, rule: rule.id }),
       });
+      if (!res.ok) {
+        const body = await readApiError(res);
+        setError({ code: body.code, message: apiErrorMessage(body, 'Failed to start drill') });
+        setStarting(false);
+        return;
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed to start drill');
       router.push(`/study/${data.session_id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start drill');
+    } catch {
+      setError({ message: 'Failed to start drill' });
       setStarting(false);
     }
   }
@@ -104,9 +124,12 @@ export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: Gramm
                 <><Target className="mr-1 h-4 w-4" /> Drill this rule</>
               )}
             </Button>
-            {error && (
-              <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error}</p>
-            )}
+            {error &&
+              (isApiKeyError(error) ? (
+                <ApiKeyNotice code={error.code} message={error.message} />
+              ) : (
+                <p className="text-sm text-red-600 dark:text-red-400" role="alert">{error.message}</p>
+              ))}
           </CardContent>
         </Card>
       </div>
@@ -124,7 +147,10 @@ export function GrammarMapClient({ studentId, statsByTag, untaggedCount }: Gramm
       {untaggedCount > 0 && (
         <p className="text-xs text-gray-400 dark:text-gray-500">
           {untaggedCount} conventions question{untaggedCount === 1 ? '' : 's'} not yet
-          classified by rule - run the classifier from the Parent Dashboard to include them.
+          classified by rule.{' '}
+          {isAdmin
+            ? 'Run the classifier from the Parent Dashboard → Question Bank to include them.'
+            : 'Ask an admin to run the classifier to include them.'}
         </p>
       )}
       {groups.map((group) => (

@@ -1,19 +1,15 @@
 export const dynamic = 'force-dynamic';
 
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent, isAdmin } from '@/lib/auth';
 import { GRAMMAR_RULES, GRAMMAR_TAG_PREFIX } from '@/lib/grammar-rules';
 import { GrammarMapClient, type RuleStats } from '@/components/grammar-map-client';
 import type { Question, QuestionAttempt } from '@/lib/types';
 
 export default async function GrammarPage() {
+  const student = await requireStudent();
+  const studentId = student.id;
   const supabase = createServerClient();
-
-  const { data: student } = await supabase
-    .from('students')
-    .select('id')
-    .limit(1)
-    .single();
-  const studentId = student?.id ?? '';
 
   // All conventions questions and their tags
   const { data: questions } = await supabase
@@ -75,6 +71,7 @@ export default async function GrammarPage() {
         </p>
       </div>
       <GrammarMapClient
+        isAdmin={isAdmin(student)}
         studentId={studentId}
         statsByTag={Object.fromEntries(stats)}
         untaggedCount={typedQuestions.length - taggedCount}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,11 +10,19 @@ interface SettingsFormProps {
   studentId: string;
   initialName: string;
   initialRwFocus: boolean;
+  initialHideFromLeaderboard: boolean;
 }
 
-export function SettingsForm({ studentId, initialName, initialRwFocus }: SettingsFormProps) {
+export function SettingsForm({
+  studentId,
+  initialName,
+  initialRwFocus,
+  initialHideFromLeaderboard,
+}: SettingsFormProps) {
+  const router = useRouter();
   const [name, setName] = useState(initialName);
   const [rwFocus, setRwFocus] = useState(initialRwFocus);
+  const [hideFromLeaderboard, setHideFromLeaderboard] = useState(initialHideFromLeaderboard);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,13 +35,20 @@ export function SettingsForm({ studentId, initialName, initialRwFocus }: Setting
       const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ student_id: studentId, name, rw_focus: rwFocus }),
+        body: JSON.stringify({
+          student_id: studentId,
+          name,
+          rw_focus: rwFocus,
+          hide_from_leaderboard: hideFromLeaderboard,
+        }),
       });
       if (!res.ok) {
         const data = await res.json();
         setError(data.error ?? 'Failed to save. Please try again.');
       } else {
         setMessage('Saved.');
+        // Re-run the root layout so the nav shows the new name.
+        router.refresh();
       }
     } catch {
       setError('Network error. Please try again.');
@@ -85,6 +101,31 @@ export function SettingsForm({ studentId, initialName, initialRwFocus }: Setting
                 Mixed study sessions will lean heavily toward Reading &amp; Writing
                 questions (roughly 3 of every 4). Quick drills and practice tests are
                 unaffected.
+              </span>
+            </span>
+          </label>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Leaderboard</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input
+              type="checkbox"
+              checked={!hideFromLeaderboard}
+              onChange={(e) => setHideFromLeaderboard(!e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-700"
+            />
+            <span>
+              <span className="text-sm font-medium text-gray-800 dark:text-gray-100">
+                Show me on the leaderboard
+              </span>
+              <span className="block text-xs text-gray-500 dark:text-gray-400">
+                Uncheck to keep your name and streak off the leaderboard, which is visible
+                to everyone on this deployment. Your own progress is unaffected.
               </span>
             </span>
           </label>

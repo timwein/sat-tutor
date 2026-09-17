@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/parent-auth';
+import { requireApiAdmin } from '@/lib/auth';
+import { requireParentAccess } from '@/lib/parent-auth';
 import { createServerClient } from '@/lib/supabase';
 import { generateQuestionId } from '@/lib/pdf-question-parser';
 import type { ClassifiedQuestion } from '@/lib/pdf-question-parser';
@@ -9,18 +9,13 @@ export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify auth cookie
-    const cookieStore = await cookies();
-    const token = cookieStore.get('parent_access_token')?.value;
+    const auth = await requireApiAdmin();
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
 
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const authResult = verifyAccessToken(token);
-    if (!authResult) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // The parent PIN token must belong to the signed-in admin
+    const parentDenied = await requireParentAccess(student.id);
+    if (parentDenied) return parentDenied;
 
     const body = await request.json();
     const { questions, testLabel } = body as {

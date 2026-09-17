@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/parent-auth';
+import { requireApiAdmin } from '@/lib/auth';
+import { requireParentAccess } from '@/lib/parent-auth';
 import { createServerClient } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('parent_access_token')?.value;
-    if (!token || !verifyAccessToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireApiAdmin();
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
+    const parentDenied = await requireParentAccess(student.id);
+    if (parentDenied) return parentDenied;
 
     const supabase = createServerClient();
     const { data, error } = await supabase

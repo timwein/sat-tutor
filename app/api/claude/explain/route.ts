@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateExplanation, streamExplanation } from '@/lib/claude';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
+import {
+  getAnthropicClient,
+  anthropicErrorResponse,
+  describeAnthropicError,
+} from '@/lib/anthropic-client';
 import { buildTutorProfile } from '@/lib/student-profile';
 import type { ExplainRequest } from '@/lib/types';
 
 export async function POST(request: NextRequest) {
   try {
     const body: ExplainRequest = await request.json();
+
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
 
     if (!body.question || !body.student_answer || !body.mode) {
       return NextResponse.json(
@@ -21,18 +31,16 @@ export async function POST(request: NextRequest) {
     let studentProfile: Record<string, unknown> | undefined = body.student_profile as
       | Record<string, unknown>
       | undefined;
-    if (body.student_id) {
-      try {
-        const supabase = createServerClient();
-        const serverProfile = await buildTutorProfile(
-          supabase,
-          body.student_id,
-          body.question.sub_skill_id
-        );
-        studentProfile = { ...serverProfile, ...(studentProfile ?? {}) };
-      } catch (profileErr) {
-        console.error('Profile build failed (non-fatal):', profileErr);
-      }
+    try {
+      const supabase = createServerClient();
+      const serverProfile = await buildTutorProfile(
+        supabase,
+        student.id,
+        body.question.sub_skill_id
+      );
+      studentProfile = { ...serverProfile, ...(studentProfile ?? {}) };
+    } catch (profileErr) {
+      console.error('Profile build failed (non-fatal):', profileErr);
     }
     if (body.frustration_level && body.frustration_level !== 'none') {
       studentProfile = {
@@ -43,6 +51,10 @@ export async function POST(request: NextRequest) {
       };
     }
 
+    // Built before the stream so a missing or unreadable key is reported as
+    // a JSON error rather than inside an SSE body.
+    const anthropic = getAnthropicClient(student);
+
     const useStreaming = request.headers.get('x-stream') === 'true';
 
     if (useStreaming) {
@@ -50,7 +62,7 @@ export async function POST(request: NextRequest) {
       const stream = new ReadableStream({
         async start(controller) {
           try {
-            const generator = streamExplanation({
+            const generator = streamExplanation(anthropic, {
               question: body.question,
               studentAnswer: body.student_answer,
               mode: body.mode,
@@ -67,7 +79,11 @@ export async function POST(request: NextRequest) {
             controller.close();
           } catch (error) {
             console.error('Stream error:', error);
-            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'Stream error' })}\n\n`));
+            const described = describeAnthropicError(error);
+            const frame = described
+              ? { error: described.message, code: described.code }
+              : { error: 'Stream error' };
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(frame)}\n\n`));
             controller.close();
           }
         },
@@ -82,7 +98,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const result = await generateExplanation({
+    const result = await generateExplanation(anthropic, {
       question: body.question,
       studentAnswer: body.student_answer,
       mode: body.mode,
@@ -97,6 +113,8 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Claude explain error:', error);
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
     return NextResponse.json(
       { error: 'Failed to generate explanation' },
       { status: 500 }

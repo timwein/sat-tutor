@@ -1,10 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk';
+import type Anthropic from '@anthropic-ai/sdk';
 import { loadPrompt, interpolatePrompt } from './prompt-utils';
 import type { TutorMode, ExplanationStrategy, Question, StudentProfile } from './types';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+// There is no shared API key: every call takes the student's own client,
+// built per request with getAnthropicClient() from lib/anthropic-client.ts.
 
 export const MODELS = {
   SONNET: 'claude-sonnet-4-6',
@@ -101,7 +100,10 @@ function cachedSystem(systemPrompt: string) {
   ];
 }
 
-export async function generateExplanation(params: ExplainParams): Promise<{
+export async function generateExplanation(
+  anthropic: Anthropic,
+  params: ExplainParams
+): Promise<{
   explanation: string;
   strategyUsed: ExplanationStrategy;
 }> {
@@ -128,7 +130,10 @@ export async function generateExplanation(params: ExplainParams): Promise<{
   return { explanation, strategyUsed: selectedStrategy };
 }
 
-export async function* streamExplanation(params: ExplainParams): AsyncGenerator<string> {
+export async function* streamExplanation(
+  anthropic: Anthropic,
+  params: ExplainParams
+): AsyncGenerator<string> {
   const { systemPrompt, messages } = buildTutorRequest(params);
 
   const stream = anthropic.messages.stream({
@@ -160,7 +165,18 @@ export interface ErrorClassification {
   what_student_likely_thought: string;
 }
 
-export async function classifyError(params: ClassifyErrorParams): Promise<ErrorClassification> {
+/**
+ * Classify a wrong answer. Pass `null` for the client when the student has
+ * no API key: the attempt is still recorded, just without a classification.
+ * Returns `null` (never a placeholder) when there is no client or the model
+ * output cannot be parsed, so callers leave the attempt unclassified rather
+ * than persisting or displaying a fake classification.
+ */
+export async function classifyError(
+  anthropic: Anthropic | null,
+  params: ClassifyErrorParams
+): Promise<ErrorClassification | null> {
+  if (!anthropic) return null;
   const { question, studentAnswer, timeSpentSeconds, confidenceLevel } = params;
 
   const promptTemplate = loadPrompt('error-classifier');
@@ -186,12 +202,7 @@ export async function classifyError(params: ClassifyErrorParams): Promise<ErrorC
   try {
     return JSON.parse(jsonString);
   } catch {
-    return {
-      error_type: 'unknown',
-      explanation: 'Could not classify this error automatically.',
-      distractor_type: 'other',
-      what_student_likely_thought: 'Unknown reasoning pattern.',
-    };
+    return null;
   }
 }
 

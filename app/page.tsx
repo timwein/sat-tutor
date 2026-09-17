@@ -16,22 +16,19 @@ import {
   Flame,
 } from 'lucide-react';
 import { createServerClient } from '@/lib/supabase';
+import { requireStudent, hasApiKey } from '@/lib/auth';
 import { computeCurrentStreak, getWeeklyStats } from '@/lib/streak-calculator';
 import { getOrGenerateWeeklyGoals } from '@/lib/micro-goals';
 import { MicroGoals } from '@/components/micro-goals';
+import { NoApiKeyBanner } from '@/components/no-api-key-banner';
 import type { StreakData, WeeklyStats } from '@/lib/streak-calculator';
 import type { ScorePrediction } from '@/lib/types';
 
 export default async function DashboardPage() {
+  // 1. Signed-in student
+  const student = await requireStudent();
+  const studentId = student.id;
   const supabase = createServerClient();
-
-  // 1. Load student
-  const { data: student } = await supabase
-    .from('students')
-    .select('*')
-    .limit(1)
-    .single();
-  const studentId = student?.id ?? '';
 
   // 2. Load latest score prediction
   const { data: latestPrediction } = await supabase
@@ -94,12 +91,14 @@ export default async function DashboardPage() {
       {/* Welcome header */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 md:text-3xl">
-          Welcome back{student?.name ? `, ${student.name.split(' ')[0]}` : ''}
+          Welcome back{student.name ? `, ${student.name.split(' ')[0]}` : ''}
         </h1>
         <p className="mt-1 text-gray-500 dark:text-gray-400">
           Keep up the momentum. Your next study session is waiting.
         </p>
       </div>
+
+      {!hasApiKey(student) && <NoApiKeyBanner />}
 
       {/* Score Prediction Widget */}
       <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/40">

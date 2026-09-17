@@ -11,10 +11,17 @@ import {
   CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { ApiKeyNotice } from '@/components/api-key-notice';
+import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 
 interface InsightsGeneratePromptProps {
   studentId: string;
   wrongAnswerCount: number;
+}
+
+interface RequestError {
+  code?: string;
+  message: string;
 }
 
 export function InsightsGeneratePrompt({
@@ -23,7 +30,7 @@ export function InsightsGeneratePrompt({
 }: InsightsGeneratePromptProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RequestError | null>(null);
 
   async function handleGenerate() {
     setIsLoading(true);
@@ -35,14 +42,19 @@ export function InsightsGeneratePrompt({
         body: JSON.stringify({ student_id: studentId }),
       });
       if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to generate insights');
+        const body = await readApiError(response);
+        setError({
+          code: body.code,
+          message: apiErrorMessage(body, 'Failed to generate insights'),
+        });
+        return;
       }
       router.refresh();
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : 'An unexpected error occurred'
-      );
+      setError({
+        message:
+          err instanceof Error ? err.message : 'An unexpected error occurred',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -79,14 +91,19 @@ export function InsightsGeneratePrompt({
           </div>
         )}
 
-        {error && (
-          <div className="flex items-center gap-3 rounded-lg bg-red-50 dark:bg-red-950/40 p-4">
-            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
-            <div className="flex-1">
-              <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+        {error &&
+          (isApiKeyError(error) ? (
+            <ApiKeyNotice code={error.code} message={error.message} />
+          ) : (
+            <div className="flex items-center gap-3 rounded-lg bg-red-50 dark:bg-red-950/40 p-4">
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400" />
+              <div className="flex-1">
+                <p className="text-sm text-red-700 dark:text-red-400">
+                  {error.message}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          ))}
       </CardContent>
 
       <CardFooter className="gap-3">

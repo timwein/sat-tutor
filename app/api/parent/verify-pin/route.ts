@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@/lib/supabase';
+import { requireApiStudent } from '@/lib/auth';
 import { verifyPin, generateAccessToken } from '@/lib/parent-auth';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { student_id, pin } = body;
+    const { pin } = body;
 
-    if (!student_id || !pin) {
+    const auth = await requireApiStudent(body.student_id);
+    if (!auth.ok) return auth.response;
+    const studentId = auth.student.id;
+
+    if (!pin) {
       return NextResponse.json(
-        { error: 'Missing required fields: student_id, pin' },
+        { error: 'Missing required field: pin' },
         { status: 400 }
       );
     }
@@ -21,7 +26,7 @@ export async function POST(request: NextRequest) {
     const { data: parentAccess } = await supabase
       .from('parent_access')
       .select('*')
-      .eq('student_id', student_id)
+      .eq('student_id', studentId)
       .maybeSingle();
 
     if (!parentAccess) {
@@ -41,7 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate access token and set cookie
-    const token = generateAccessToken(student_id);
+    const token = generateAccessToken(studentId);
 
     (await cookies()).set('parent_access_token', token, {
       httpOnly: true,
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
     await supabase
       .from('parent_access')
       .update({ last_accessed_at: new Date().toISOString() })
-      .eq('student_id', student_id);
+      .eq('student_id', studentId);
 
     return NextResponse.json({ success: true });
   } catch (error) {

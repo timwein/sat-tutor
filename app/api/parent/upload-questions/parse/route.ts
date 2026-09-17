@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
-import { verifyAccessToken } from '@/lib/parent-auth';
+import { requireApiAdmin } from '@/lib/auth';
+import {
+  getAnthropicClient,
+  anthropicErrorResponse,
+  describeAnthropicError,
+} from '@/lib/anthropic-client';
+import { requireParentAccess } from '@/lib/parent-auth';
 import { parseAnswersPdf, callClaudeStreaming } from '@/lib/pdf-question-parser';
 import type { PdfType } from '@/lib/pdf-question-parser';
 import { loadPrompt, interpolatePrompt } from '@/lib/prompt-utils';
@@ -13,11 +18,12 @@ export async function POST(request: NextRequest) {
     console.log(`[parse] +${((Date.now() - startTime) / 1000).toFixed(1)}s ${msg}`);
 
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('parent_access_token')?.value;
-    if (!token || !verifyAccessToken(token)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireApiAdmin();
+    if (!auth.ok) return auth.response;
+    const { student } = auth;
+
+    const parentDenied = await requireParentAccess(student.id);
+    if (parentDenied) return parentDenied;
 
     const { type, text, moduleFilter } = (await request.json()) as {
       type: PdfType;
@@ -34,10 +40,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Built before any streaming starts so a missing key is a JSON 402, not
+    // an error marker inside a text stream.
+    const anthropic = getAnthropicClient(student);
+
     // Answers are small/fast — use simple JSON response
     if (type === 'answers') {
       log('calling parseAnswersPdf...');
-      const data = await parseAnswersPdf(text);
+      const data = await parseAnswersPdf(anthropic, text);
       log(`parseAnswersPdf returned ${data.length} answers`);
       return NextResponse.json({ type, data });
     }
@@ -69,6 +79,7 @@ export async function POST(request: NextRequest) {
 
         try {
           await callClaudeStreaming(
+            anthropic,
             `${type}${moduleFilter ? `-${moduleFilter}` : ''}`,
             systemPrompt,
             16000,
@@ -81,10 +92,17 @@ export async function POST(request: NextRequest) {
           sendRaw('\n__DONE__');
           controller.close();
         } catch (error) {
-          const message =
-            error instanceof Error ? error.message : 'Internal server error';
+          // Headers are already sent, so key problems are reported in-band as
+          // a JSON { error, code } body after the error marker.
+          const described = describeAnthropicError(error);
+          const message = described
+            ? described.message
+            : error instanceof Error ? error.message : 'Internal server error';
           log(`ERROR: ${message}`);
-          sendRaw('\n__ERROR__:' + message);
+          sendRaw(
+            '\n__ERROR__:' +
+              JSON.stringify({ error: message, code: described?.code })
+          );
           controller.close();
         }
       },
@@ -98,6 +116,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    const keyResponse = anthropicErrorResponse(error);
+    if (keyResponse) return keyResponse;
+
     console.error('Parse PDF error:', error);
     const message =
       error instanceof Error ? error.message : 'Internal server error';
