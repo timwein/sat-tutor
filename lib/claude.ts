@@ -1,5 +1,6 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import { loadPrompt, interpolatePrompt } from './prompt-utils';
+import { isStudentProduced, formatAcceptedAnswers } from './answer-format';
 import type { TutorMode, ExplanationStrategy, Question, StudentProfile } from './types';
 
 // There is no shared API key: every call takes the student's own client,
@@ -30,6 +31,19 @@ interface TutorRequest {
   selectedStrategy: ExplanationStrategy;
 }
 
+/**
+ * Appended to prompts for grid-in questions so the model never talks about
+ * answer letters or distractors that do not exist.
+ */
+function studentProducedNote(correctAnswer: string): string {
+  return (
+    '\n\nANSWER FORMAT: This is a student-produced response question. There are no answer choices; ' +
+    'the student typed their own numeric answer, shown above exactly as entered. Never refer to ' +
+    'answer letters, "the choices" or distractors. Equivalent decimals and fractions are all ' +
+    `correct (accepted: ${formatAcceptedAnswers(correctAnswer)}).`
+  );
+}
+
 function buildTutorRequest(params: ExplainParams): TutorRequest {
   const { question, studentAnswer, mode, strategy, conversationHistory = [], studentProfile } = params;
 
@@ -44,6 +58,7 @@ function buildTutorRequest(params: ExplainParams): TutorRequest {
       difficulty: question.difficulty,
       question_text: question.question_text,
       passage_text: question.passage_text,
+      answer_format: isStudentProduced(question) ? 'student_produced_response' : 'multiple_choice',
       answer_choices: question.answer_choices,
       correct_answer: question.correct_answer,
       tags: question.tags,
@@ -51,6 +66,10 @@ function buildTutorRequest(params: ExplainParams): TutorRequest {
     student_answer: studentAnswer,
     correct_answer: question.correct_answer,
   });
+
+  if (isStudentProduced(question)) {
+    systemPrompt += studentProducedNote(question.correct_answer);
+  }
 
   // Words-in-Context: coach the decode method before revealing meanings.
   // The student is learning to solve these WITHOUT knowing the hard word.
@@ -181,13 +200,16 @@ export async function classifyError(
 
   const promptTemplate = loadPrompt('error-classifier');
 
-  const systemPrompt = interpolatePrompt(promptTemplate, {
+  let systemPrompt = interpolatePrompt(promptTemplate, {
     question_text: question.question_text,
     correct_answer: question.correct_answer,
     student_answer: studentAnswer,
     time_seconds: String(timeSpentSeconds ?? 'unknown'),
     confidence_level: confidenceLevel ?? 'unknown',
   });
+  if (isStudentProduced(question)) {
+    systemPrompt += studentProducedNote(question.correct_answer);
+  }
 
   const response = await anthropic.messages.create({
     model: MODELS.SONNET,

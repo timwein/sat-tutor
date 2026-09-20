@@ -4,6 +4,7 @@ import { createServerClient } from '@/lib/supabase';
 import { requireApiStudent } from '@/lib/auth';
 import { getOptionalAnthropicClient } from '@/lib/anthropic-client';
 import { calculateEloAdjustment, getMasteryLevel } from '@/lib/elo';
+import { isAnswerCorrect } from '@/lib/answer-format';
 import { classifyError } from '@/lib/claude';
 import { analyzePacing } from '@/lib/pacing-analyzer';
 import { SKILL_TAXONOMY } from '@/lib/types';
@@ -163,9 +164,7 @@ export async function POST(request: NextRequest) {
       if (!question) continue;
 
       const studentAnswer = answer.student_answer;
-      const isCorrect = studentAnswer
-        ? studentAnswer.toUpperCase() === question.correct_answer.toUpperCase()
-        : false;
+      const isCorrect = isAnswerCorrect(question, studentAnswer);
 
       if (isCorrect) totalCorrect++;
       totalTimeUsedSeconds += answer.time_spent_seconds;

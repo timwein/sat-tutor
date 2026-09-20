@@ -107,7 +107,7 @@ export function TimedSection({
   const answeredSet = useMemo(() => {
     const set = new Set<number>();
     questionStates.forEach((qs, i) => {
-      if (qs.selectedAnswer !== null) set.add(i);
+      if (qs.selectedAnswer && qs.selectedAnswer.trim()) set.add(i);
     });
     return set;
   }, [questionStates]);
@@ -300,7 +300,7 @@ export function TimedSection({
     try {
       const answers = finalStates.map((qs) => ({
         question_id: qs.questionId,
-        student_answer: qs.selectedAnswer,
+        student_answer: qs.selectedAnswer?.trim() || null,
         time_spent_seconds: Math.round(qs.timeSpentMs / 1000),
         confidence_level: qs.confidenceLevel,
         flagged: qs.flagged,
