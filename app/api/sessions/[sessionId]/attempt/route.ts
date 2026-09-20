@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 import { requireApiStudent } from '@/lib/auth';
 import { calculateEloAdjustment, getMasteryLevel } from '@/lib/elo';
+import { isAnswerCorrect } from '@/lib/answer-format';
 
 import { detectFrustration } from '@/lib/frustration-detector';
 import { getNextInterval, getNextReviewDate } from '@/lib/spaced-repetition';
@@ -57,7 +58,8 @@ export async function POST(
     const studentId = auth.student.id;
 
     // Validate required fields
-    if (!question_id || (!student_answer && !skipped)) {
+    const hasAnswer = typeof student_answer === 'string' && student_answer.trim().length > 0;
+    if (!question_id || (!hasAnswer && !skipped)) {
       return NextResponse.json(
         { error: 'Missing required fields: question_id, student_answer (or skipped)' },
         { status: 400 }
@@ -113,8 +115,8 @@ export async function POST(
     }
 
     // Determine correctness
-    const effectiveAnswer = skipped ? 'SKIP' : student_answer;
-    const isCorrect = !skipped && student_answer.toUpperCase() === question.correct_answer.toUpperCase();
+    const effectiveAnswer = skipped ? 'SKIP' : String(student_answer).trim();
+    const isCorrect = !skipped && isAnswerCorrect(question, effectiveAnswer);
 
     // ----- Elo Update -----
     // Load or create skill_rating for this student + sub_skill

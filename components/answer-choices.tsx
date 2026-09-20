@@ -2,6 +2,8 @@
 
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { isStudentProduced } from '@/lib/answer-format';
+import { GridInAnswer } from '@/components/grid-in-answer';
 
 interface AnswerChoicesProps {
   choices: Record<string, string>;
@@ -24,6 +26,19 @@ export function AnswerChoices({
   correctAnswer,
   showResult,
 }: AnswerChoicesProps) {
+  // Student-produced response: no choices, the student types a number.
+  if (isStudentProduced({ answer_choices: choices })) {
+    return (
+      <GridInAnswer
+        value={selectedAnswer ?? ''}
+        onChange={onSelect}
+        disabled={disabled}
+        correctAnswer={correctAnswer}
+        showResult={showResult}
+      />
+    );
+  }
+
   const sortedKeys = Object.keys(choices).sort();
 
   return (

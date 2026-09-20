@@ -201,7 +201,7 @@ export function ActiveSession({
 
   // Submit answer
   async function submitAnswer() {
-    if (!currentQuestion || !selectedAnswer) return;
+    if (!currentQuestion || !selectedAnswer?.trim()) return;
 
     setState('submitting');
     setError(null);
@@ -215,7 +215,7 @@ export function ActiveSession({
         body: JSON.stringify({
           student_id: studentId,
           question_id: currentQuestion.question_id,
-          student_answer: selectedAnswer,
+          student_answer: selectedAnswer.trim(),
           time_spent_seconds: timeSpent,
           confidence_level: confidence,
           skipped: false,
@@ -446,7 +446,7 @@ export function ActiveSession({
                   <div className="flex gap-3">
                     <Button
                       onClick={submitAnswer}
-                      disabled={!selectedAnswer}
+                      disabled={!selectedAnswer?.trim()}
                       className="flex-1"
                     >
                       Submit Answer

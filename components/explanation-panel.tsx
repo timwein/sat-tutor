@@ -6,6 +6,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ApiKeyNotice } from '@/components/api-key-notice';
 import { cn } from '@/lib/utils';
+import { isStudentProduced } from '@/lib/answer-format';
 import { readApiError, apiErrorMessage, isApiKeyError } from '@/lib/api-errors';
 import type {
   Question,
@@ -44,6 +45,8 @@ interface HelpButton {
   label: string;
   prompt: string;
   sections: Array<'math' | 'reading_writing'>;
+  /** Only makes sense when the question has answer choices. */
+  requiresChoices?: boolean;
 }
 
 const HELP_BUTTONS: HelpButton[] = [
@@ -61,6 +64,7 @@ const HELP_BUTTONS: HelpButton[] = [
     label: 'Keywords to look for',
     prompt: "What key words or phrases in the question and answer choices should I focus on? What clues do they give?",
     sections: ['reading_writing'],
+    requiresChoices: true,
   },
   {
     label: "I'm stuck",
@@ -71,6 +75,7 @@ const HELP_BUTTONS: HelpButton[] = [
     label: 'Help me eliminate wrong answers',
     prompt: "Help me eliminate wrong answers. Walk through each choice and explain why it's likely right or wrong.",
     sections: ['math', 'reading_writing'],
+    requiresChoices: true,
   },
 ];
 
@@ -98,7 +103,8 @@ export function ExplanationPanel({
     question.section === 'math' ? MATH_STRATEGIES : RW_STRATEGIES;
 
   const helpButtons = HELP_BUTTONS.filter((b) =>
-    b.sections.includes(question.section)
+    b.sections.includes(question.section) &&
+    !(b.requiresChoices && isStudentProduced(question))
   );
 
   const fetchExplanation = useCallback(

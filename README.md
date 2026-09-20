@@ -62,7 +62,7 @@ The invite code is the trust boundary for auto-confirmed accounts, so the admin 
 
 - `proxy.ts` refreshes the Supabase session and sends signed-out visitors to `/login`.
 - `lib/auth.ts` maps the signed-in user to a `students` row (auto-created on first login) and is the only source of identity in pages and API routes. Client-supplied `student_id` values are checked against the session and rejected on mismatch.
-- The question bank is shared. Only admins can upload, generate, or edit questions. Vocabulary drills a student generates from their own word bank are private to that student (`questions.created_by_student_id`).
+- The question bank is shared. Only admins can upload, generate, or edit questions. A question with an empty `answer_choices` object is a student-produced response (SAT grid-in): the student types a number, and grading accepts equivalent decimals and fractions, with several accepted values separated by `;` in `correct_answer` (`30; -30`). Vocabulary drills a student generates from their own word bank are private to that student (`questions.created_by_student_id`).
 - The parent dashboard is per student and sits behind a parent PIN inside the student's login. A lost PIN is reset by an admin in the Supabase SQL editor with `DELETE FROM parent_access WHERE student_id = '<students.id>';`, after which the dashboard asks for a new one.
 - `/leaderboard` ranks everyone by current streak; a student can hide themselves in Settings.
 

@@ -17,6 +17,7 @@ import { PacingChart } from './pacing-chart';
 import { PacingSummary } from './pacing-summary';
 import { AddWordInline } from './add-word-inline';
 import { cn } from '@/lib/utils';
+import { formatAcceptedAnswers } from '@/lib/answer-format';
 import type { ModuleResult, MasteryLevel } from '@/lib/types';
 
 interface ModuleReviewProps {
@@ -186,7 +187,7 @@ export function ModuleReview({ result, onBack, studentId }: ModuleReviewProps) {
                       {!qr.isCorrect && (
                         <span className="text-xs text-gray-400 dark:text-gray-500">
                           {qr.studentAnswer ?? 'No answer'} &rarr;{' '}
-                          {qr.correctAnswer}
+                          {formatAcceptedAnswers(qr.correctAnswer)}
                         </span>
                       )}
                       {!qr.isCorrect && qr.errorClassification && (
@@ -242,7 +243,7 @@ export function ModuleReview({ result, onBack, studentId }: ModuleReviewProps) {
                               Correct Answer
                             </p>
                             <p className="mt-1 text-sm font-medium text-green-600">
-                              {qr.correctAnswer}
+                              {formatAcceptedAnswers(qr.correctAnswer)}
                             </p>
                           </div>
                         </div>
